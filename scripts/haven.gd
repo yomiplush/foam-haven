@@ -1,7 +1,6 @@
 extends Node3D
 
 const Worlds = preload("res://scripts/worlds.gd")
-const SCENE_NAMES := ["青い海", "夕焼けの空", "風船の部屋", "ぬいぐるみ部屋", "お菓子の国"]
 const HavenMenu = preload("res://scripts/haven_menu.gd")
 const Soundscape = preload("res://scripts/soundscape.gd")
 const AvatarRig = preload("res://scripts/avatar_rig.gd")
@@ -238,6 +237,9 @@ func _menu_action(action: StringName, index: int):
 		&"skin": _toggle_skin()
 		&"drift": _toggle_drift()
 		&"sound": _toggle_sound()
+		&"lang_changed":
+			_save_preferences()
+			_update_ui()
 		&"close": _toggle_menu()
 		&"avatar_open", &"avatar_refresh": _show_avatars()
 		&"avatar_select":
@@ -248,7 +250,7 @@ func _menu_action(action: StringName, index: int):
 		&"avatar_recenter":
 			avatar.calibrate(camera.global_transform)
 			mirror.place(camera.global_transform)
-			menu.avatar_note.text = "目線と正面を合わせました。"
+			menu.avatar_note.text = I18n.t("note_eye_centered")
 		&"mirror": _toggle_mirror()
 		&"avatar_sitting":
 			avatar.sitting_style = 1 - avatar.sitting_style
@@ -258,7 +260,7 @@ func _menu_action(action: StringName, index: int):
 			avatar.size_multiplier = clampf(avatar.size_multiplier + (-0.05 if action == &"avatar_smaller" else 0.05), 0.5, 1.5)
 			avatar.calibrate(camera.global_transform)
 			_save_avatar()
-			menu.avatar_note.text = "体の大きさ：%d%%" % roundi(avatar.size_multiplier * 100)
+			menu.avatar_note.text = I18n.tf("note_size_pct", [roundi(avatar.size_multiplier * 100)])
 
 func _place_menu():
 	var forward := -camera.global_basis.z
@@ -633,6 +635,7 @@ func _save_preferences():
 	config.set_value("haven", "balloon", balloon_mode)
 	config.set_value("haven", "membrane", membrane_visible)
 	config.set_value("haven", "sound", sound_on)
+	config.set_value("haven", "lang", I18n.lang)
 	config.save("user://preferences.cfg")
 
 func _load_preferences():
@@ -644,6 +647,9 @@ func _load_preferences():
 		balloon_mode = bool(config.get_value("haven", "balloon", false))
 		membrane_visible = bool(config.get_value("haven", "membrane", true))
 		sound_on = bool(config.get_value("haven", "sound", true))
+		var saved_lang := str(config.get_value("haven", "lang", ""))
+		if saved_lang in I18n.LANG_CODES:
+			I18n.set_lang(saved_lang)
 
 func _capture_scenes():
 	drift = false
@@ -690,7 +696,7 @@ func _capture_scenes():
 	await RenderingServer.frame_post_draw
 	menu.viewport.get_texture().get_image().save_png("res://dist/preview_help.png")
 	if avatar.load_avatar(AvatarLibrary.SAMPLE):
-		_show_avatars("読み込み済み：サンプルの一人称アバター")
+		_show_avatars(I18n.t("sample_loaded"))
 		await get_tree().create_timer(0.3).timeout
 		await RenderingServer.frame_post_draw
 		menu.viewport.get_texture().get_image().save_png("res://dist/preview_avatar_menu.png")
@@ -917,7 +923,7 @@ func _make_avatar_system():
 	avatar_picker.access = FileDialog.ACCESS_FILESYSTEM
 	avatar_picker.file_mode = FileDialog.FILE_MODE_OPEN_FILE
 	avatar_picker.use_native_dialog = true
-	avatar_picker.title = "VRMアバターを選ぶ"
+	avatar_picker.title = I18n.t("picker_title")
 	avatar_picker.filters = PackedStringArray(["*.vrm ; VRM Avatar"])
 	add_child(avatar_picker)
 	avatar_picker.file_selected.connect(_load_avatar_file)
@@ -943,7 +949,7 @@ func _avatar_hand_inputs() -> Dictionary:
 
 func _toggle_mirror():
 	if not avatar.is_loaded():
-		_show_avatars("先にVRMを選ぶと、鏡で全身を見られます。")
+		_show_avatars(I18n.t("need_vrm_first"))
 		return
 	mirror.set_enabled(not mirror.enabled)
 	if mirror.enabled:
@@ -962,10 +968,10 @@ func _calibrate_avatar():
 	if menu_open:
 		_toggle_menu()
 	for seconds in [5,4,3,2,1]:
-		mirror.caption.text = "腕を肩の高さで左右に広げてください  %d" % seconds
+		mirror.caption.text = I18n.tf("cal_countdown", [seconds])
 		await get_tree().create_timer(1.0).timeout
 		if not focused or not avatar.is_loaded() or avatar.model.get_instance_id() != model_id or menu_open:
-			mirror.caption.text = "体格合わせを中止しました。メニューから再開できます。"
+			mirror.caption.text = I18n.t("cal_aborted")
 			calibration_pending = false
 			return
 	var inputs := _avatar_hand_inputs()
@@ -980,7 +986,7 @@ func _show_avatars(note: String = ""):
 
 func _choose_avatar_file():
 	if xr_active and not DisplayServer.has_feature(DisplayServer.FEATURE_NATIVE_DIALOG_FILE):
-		menu.avatar_note.text = "PCからVRMを転送して「一覧を更新」を押してください。READMEに転送方法があります。"
+		menu.avatar_note.text = I18n.t("pc_transfer")
 		return
 	avatar_picker.popup_centered_ratio(0.8)
 
@@ -997,10 +1003,10 @@ func _load_avatar_file(path: String):
 		avatar.unload_avatar()
 		mirror.set_enabled(false)
 		_save_avatar()
-		_show_avatars("ぬいぐるみの手に戻しました。")
+		_show_avatars(I18n.t("back_to_plush"))
 		return
 	avatar_loading = true
-	_show_avatars("アバターを読み込んでいます…")
+	_show_avatars(I18n.t("loading_avatar"))
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var imported := AvatarLibrary.import_copy(path)
@@ -1009,7 +1015,7 @@ func _load_avatar_file(path: String):
 	elif avatar.load_avatar(imported.path):
 		avatar.calibrate(camera.global_transform)
 		_save_avatar()
-		_show_avatars("読み込みました。見下ろすと自分の体が見えます。")
+		_show_avatars(I18n.t("avatar_loaded"))
 	else:
 		_show_avatars(avatar.last_error)
 	avatar_loading = false

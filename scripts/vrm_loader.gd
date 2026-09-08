@@ -10,31 +10,31 @@ const MAX_BYTES := 128 * 1024 * 1024
 
 static func inspect_bytes(bytes: PackedByteArray) -> Dictionary:
 	if bytes.size() < 20 or bytes.size() > MAX_BYTES:
-		return {"error": "VRMのサイズが不正です（上限128MB）。"}
+		return {"error": I18n.t("err_vrm_size")}
 	if bytes.decode_u32(0) != 0x46546c67 or bytes.decode_u32(4) != 2 or bytes.decode_u32(8) != bytes.size():
-		return {"error": "VRM形式のファイルを選んでください。"}
+		return {"error": I18n.t("err_not_vrm")}
 	var length := int(bytes.decode_u32(12))
 	if bytes.decode_u32(16) != 0x4e4f534a or length > bytes.size() - 20:
-		return {"error": "VRMのデータが壊れています。"}
+		return {"error": I18n.t("err_corrupt")}
 	var json: Variant = JSON.parse_string(bytes.slice(20, 20 + length).get_string_from_utf8())
 	if not json is Dictionary:
-		return {"error": "VRMの情報を読めませんでした。"}
+		return {"error": I18n.t("err_no_info")}
 	var extensions: Dictionary = json.get("extensions", {})
 	if not extensions.has("VRM") and not extensions.has("VRMC_vrm"):
-		return {"error": "VRM 0.x または1.0のアバターを選んでください。"}
+		return {"error": I18n.t("err_vrm_version")}
 	for kind in ["buffers", "images"]:
 		for item in json.get(kind, []):
 			var uri: String = item.get("uri", "")
 			if not uri.is_empty() and not uri.begins_with("data:"):
-				return {"error": "画像を内蔵したVRMで書き出してください。"}
+				return {"error": I18n.t("err_no_image")}
 	return {"version": "1.0" if extensions.has("VRMC_vrm") else "0.x"}
 
 static func load_model(path: String) -> Dictionary:
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		return {"error": "ファイルを開けませんでした。もう一度選んでください。"}
+		return {"error": I18n.t("err_open_again")}
 	if file.get_length() > MAX_BYTES:
-		return {"error": "VRMが大きすぎます（上限128MB）。"}
+		return {"error": I18n.t("err_too_big")}
 	var bytes := file.get_buffer(file.get_length())
 	file.close()
 	var result := inspect_bytes(bytes)
@@ -55,6 +55,6 @@ static func load_model(path: String) -> Dictionary:
 	for extension in extensions:
 		GLTFDocument.unregister_gltf_document_extension(extension)
 	if model == null:
-		return {"error": "このVRMを読み込めませんでした。別のVRMを試してください。"}
+		return {"error": I18n.t("err_load_avatar")}
 	result.model = model
 	return result

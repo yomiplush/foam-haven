@@ -1,0 +1,818 @@
+{
+ "brand_tag": {
+  "ja": "ぬいぐるみの私、泡の中。",
+  "en": "My plush self, inside a bubble.",
+  "zh_hans": "毛绒绒的我，在泡泡里。",
+  "zh_hant": "毛絨絨的我，在泡泡裡。",
+  "ko": "거품 속의 봉제인형 나.",
+  "ru": "Плюшевая я — внутри пузыря."
+ },
+ "tag_sub": {
+  "ja": "やわらかな手で、二重の膜にふれる。",
+  "en": "Soft hands touch the double membrane.",
+  "zh_hans": "用柔软的手，触碰双层膜。",
+  "zh_hant": "用柔軟的手，觸碰雙層膜。",
+  "ko": "부드러운 손으로 이중 막을 만져요.",
+  "ru": "Мягкими руками коснитесь двойной мембраны."
+ },
+ "world_0": {
+  "ja": "青い海",
+  "en": "Blue Ocean",
+  "zh_hans": "蓝色的大海",
+  "zh_hant": "藍色的大海",
+  "ko": "푸른 바다",
+  "ru": "Синий океан"
+ },
+ "world_1": {
+  "ja": "夕焼けの空",
+  "en": "Sunset Sky",
+  "zh_hans": "晚霞的天空",
+  "zh_hant": "晚霞的天空",
+  "ko": "노을 하늘",
+  "ru": "Закатное небо"
+ },
+ "world_2": {
+  "ja": "風船の部屋",
+  "en": "Balloon Room",
+  "zh_hans": "气球房间",
+  "zh_hant": "氣球房間",
+  "ko": "풍선 방",
+  "ru": "Комната с шарами"
+ },
+ "world_3": {
+  "ja": "ぬいぐるみ部屋",
+  "en": "Plush Room",
+  "zh_hans": "毛绒玩具房间",
+  "zh_hant": "絨毛玩具房間",
+  "ko": "봉제인형 방",
+  "ru": "Комната плюшевых игрушек"
+ },
+ "world_4": {
+  "ja": "お菓子の国",
+  "en": "Candy Land",
+  "zh_hans": "糖果王国",
+  "zh_hant": "糖果王國",
+  "ko": "사탕 나라",
+  "ru": "Конфетная страна"
+ },
+ "desc_0": {
+  "ja": "波音と、ゆらめく光。",
+  "en": "Waves and shimmering light.",
+  "zh_hans": "波浪声与摇曳的光。",
+  "zh_hant": "波浪聲與搖曳的光。",
+  "ko": "파도 소리와 출렁이는 빛.",
+  "ru": "Волны и мерцающий свет."
+ },
+ "desc_1": {
+  "ja": "雲の上で、ひと休み。",
+  "en": "A rest above the clouds.",
+  "zh_hans": "在云端，休息片刻。",
+  "zh_hant": "在雲端，休息片刻。",
+  "ko": "구름 위에서 잠깐 쉬어요.",
+  "ru": "Отдых над облаками."
+ },
+ "desc_2": {
+  "ja": "風船に囲まれて。",
+  "en": "Surrounded by balloons.",
+  "zh_hans": "被气球包围。",
+  "zh_hant": "被氣球包圍。",
+  "ko": "풍선에 둘러싸여.",
+  "ru": "В окружении шаров."
+ },
+ "desc_3": {
+  "ja": "おもちゃと、ぬくもり。",
+  "en": "Toys and warmth.",
+  "zh_hans": "玩具与温暖。",
+  "zh_hant": "玩具與溫暖。",
+  "ko": "장난감과 포근함.",
+  "ru": "Игрушки и тепло."
+ },
+ "desc_4": {
+  "ja": "甘い夢に、包まれて。",
+  "en": "Wrapped in a sweet dream.",
+  "zh_hans": "被甜蜜的梦包裹。",
+  "zh_hant": "被甜蜜的夢包裹。",
+  "ko": "달콤한 꿈에 감싸여.",
+  "ru": "В сладкой мечте."
+ },
+ "staying": {
+  "ja": "滞在中",
+  "en": "Now",
+  "zh_hans": "在此",
+  "zh_hant": "在此",
+  "ko": "머무는 중",
+  "ru": "Здесь"
+ },
+ "how_to": {
+  "ja": "あなたの過ごし方",
+  "en": "How to spend time",
+  "zh_hans": "如何度过时光",
+  "zh_hant": "如何度過時光",
+  "ko": "보내는 방법",
+  "ru": "Чем заняться"
+ },
+ "opt_wrap": {
+  "ja": "包むもの",
+  "en": "Wrap in",
+  "zh_hans": "包裹",
+  "zh_hant": "包裹",
+  "ko": "감싸는 것",
+  "ru": "Оболочка"
+ },
+ "mode_bubble": {
+  "ja": "虹色の泡",
+  "en": "Rainbow bubble",
+  "zh_hans": "彩虹泡泡",
+  "zh_hant": "彩虹泡泡",
+  "ko": "무지개 거품",
+  "ru": "Радужный пузырь"
+ },
+ "mode_balloon": {
+  "ja": "風船",
+  "en": "Balloon",
+  "zh_hans": "气球",
+  "zh_hant": "氣球",
+  "ko": "풍선",
+  "ru": "Шар"
+ },
+ "opt_membrane": {
+  "ja": "膜の表示",
+  "en": "Membrane",
+  "zh_hans": "膜的显示",
+  "zh_hant": "膜的顯示",
+  "ko": "막 표시",
+  "ru": "Мембрана"
+ },
+ "on": {
+  "ja": "ON",
+  "en": "ON",
+  "zh_hans": "开",
+  "zh_hant": "開",
+  "ko": "켬",
+  "ru": "ВКЛ"
+ },
+ "off": {
+  "ja": "OFF",
+  "en": "OFF",
+  "zh_hans": "关",
+  "zh_hant": "關",
+  "ko": "끔",
+  "ru": "ВЫКЛ"
+ },
+ "opt_stop_drift": {
+  "ja": "浮遊を止める",
+  "en": "Stop drifting",
+  "zh_hans": "停止漂浮",
+  "zh_hant": "停止漂浮",
+  "ko": "부유 멈춤",
+  "ru": "Остановить парение"
+ },
+ "opt_start_drift": {
+  "ja": "ゆっくり浮遊する    →",
+  "en": "Drift slowly    →",
+  "zh_hans": "缓缓漂浮    →",
+  "zh_hant": "緩緩漂浮    →",
+  "ko": "천천히 부유하기    →",
+  "ru": "Медленно парить    →"
+ },
+ "opt_sound": {
+  "ja": "音",
+  "en": "Sound",
+  "zh_hans": "声音",
+  "zh_hant": "聲音",
+  "ko": "소리",
+  "ru": "Звук"
+ },
+ "drift_on": {
+  "ja": "ゆっくり浮遊しています",
+  "en": "Drifting slowly",
+  "zh_hans": "正在缓缓漂浮",
+  "zh_hant": "正在緩緩漂浮",
+  "ko": "천천히 부유 중",
+  "ru": "Медленно парит"
+ },
+ "drift_off": {
+  "ja": "静止しています",
+  "en": "Still",
+  "zh_hans": "静止中",
+  "zh_hant": "靜止中",
+  "ko": "정지 중",
+  "ru": "Неподвижно"
+ },
+ "primary_enter": {
+  "ja": "この景色で、くつろぐ    →",
+  "en": "Relax in this scene    →",
+  "zh_hans": "在这片景色中放松    →",
+  "zh_hant": "在這片景色中放鬆    →",
+  "ko": "이 풍경에서 쉬기    →",
+  "ru": "Отдохнуть здесь    →"
+ },
+ "btn_help": {
+  "ja": "操作ガイド",
+  "en": "Guide",
+  "zh_hans": "操作指南",
+  "zh_hant": "操作指南",
+  "ko": "조작 가이드",
+  "ru": "Справка"
+ },
+ "btn_mirror_on": {
+  "ja": "鏡を出す",
+  "en": "Mirror on",
+  "zh_hans": "打开镜子",
+  "zh_hant": "打開鏡子",
+  "ko": "거울 켜기",
+  "ru": "Включить зеркало"
+ },
+ "btn_mirror_off": {
+  "ja": "鏡をしまう",
+  "en": "Mirror off",
+  "zh_hans": "收起镜子",
+  "zh_hant": "收起鏡子",
+  "ko": "거울 끄기",
+  "ru": "Выключить зеркало"
+ },
+ "hint_menu": {
+  "ja": "B / Y でいつでもメニューへ。",
+  "en": "Press B / Y for the menu anytime.",
+  "zh_hans": "按 B / Y 可随时打开菜单。",
+  "zh_hant": "按 B / Y 可隨時開啟選單。",
+  "ko": "B / Y 로 언제든 메뉴를 열어요.",
+  "ru": "Нажмите B / Y, чтобы открыть меню."
+ },
+ "avatar_choose": {
+  "ja": "自分の姿を選ぶ    →",
+  "en": "Choose your look    →",
+  "zh_hans": "选择自己的形象    →",
+  "zh_hant": "選擇自己的形象    →",
+  "ko": "내 모습 고르기    →",
+  "ru": "Выбрать свой вид    →"
+ },
+ "btn_lang": {
+  "ja": "言語",
+  "en": "Language",
+  "zh_hans": "语言",
+  "zh_hant": "語言",
+  "ko": "언어",
+  "ru": "Язык"
+ },
+ "help_0": {
+  "ja": "膜に触れる",
+  "en": "Touch the membrane",
+  "zh_hans": "触碰膜",
+  "zh_hant": "觸碰膜",
+  "ko": "막 만지기",
+  "ru": "Коснуться мембраны"
+ },
+ "help_1": {
+  "ja": "小さな泡をつくる",
+  "en": "Make a little bubble",
+  "zh_hans": "做一个小泡泡",
+  "zh_hant": "做一個小泡泡",
+  "ko": "작은 거품 만들기",
+  "ru": "Создать пузырёк"
+ },
+ "help_2": {
+  "ja": "浮遊する・止まる",
+  "en": "Drift / stop",
+  "zh_hans": "漂浮・停止",
+  "zh_hant": "漂浮・停止",
+  "ko": "부유하기·멈추기",
+  "ru": "Парить / остановиться"
+ },
+ "help_3": {
+  "ja": "メニューを開く",
+  "en": "Open the menu",
+  "zh_hans": "打开菜单",
+  "zh_hant": "開啟選單",
+  "ko": "메뉴 열기",
+  "ru": "Открыть меню"
+ },
+ "help_4": {
+  "ja": "包む泡の位置を戻す",
+  "en": "Return the bubble",
+  "zh_hans": "把泡泡归位",
+  "zh_hant": "把泡泡歸位",
+  "ko": "거품 위치 되돌리기",
+  "ru": "Вернуть пузырь на место"
+ },
+ "helpd_0": {
+  "ja": "手を近づける / グリップを長押し",
+  "en": "Bring a hand close / hold the grip",
+  "zh_hans": "伸出手接近 / 长按握柄",
+  "zh_hant": "伸出手接近 / 長按握柄",
+  "ko": "손을 가까이 / 그립 길게 누르기",
+  "ru": "Поднесите руку / удерживайте грип"
+ },
+ "helpd_1": {
+  "ja": "トリガーを押す",
+  "en": "Pull the trigger",
+  "zh_hans": "按扳机键",
+  "zh_hant": "按扳機鍵",
+  "ko": "트리거 누르기",
+  "ru": "Нажмите на курок"
+ },
+ "helpd_2": {
+  "ja": "A / X を押す。最初は静止しています。",
+  "en": "Press A / X. It starts still.",
+  "zh_hans": "按 A / X。最初是静止的。",
+  "zh_hant": "按 A / X。最初是靜止的。",
+  "ko": "A / X 누르기. 처음에는 정지 상태.",
+  "ru": "Нажмите A / X. Сначала — покой."
+ },
+ "helpd_3": {
+  "ja": "B / Y を押す。浮遊も止まります。",
+  "en": "Press B / Y. Drifting stops too.",
+  "zh_hans": "按 B / Y。漂浮也会停止。",
+  "zh_hant": "按 B / Y。漂浮也會停止。",
+  "ko": "B / Y 누르기. 부유도 멈춥니다.",
+  "ru": "Нажмите B / Y. Парение тоже остановится."
+ },
+ "helpd_4": {
+  "ja": "スティックを押し込む",
+  "en": "Press the stick",
+  "zh_hans": "按下摇杆",
+  "zh_hant": "按下搖桿",
+  "ko": "스틱 누르기",
+  "ru": "Нажмите на стик"
+ },
+ "help_pc": {
+  "ja": "左スティック：泡の中をそっと移動、端でぽにょん。\nPC：WASD 移動 / P で膜 / 右ドラッグで見回す\n1〜5 で景色 / Space で浮遊 / M でメニュー",
+  "en": "Left stick: move softly inside, boing at the edge.\nPC: WASD move / P membrane / right-drag look\n1-5 scenes / Space drift / M menu",
+  "zh_hans": "左摇杆：在泡内轻轻移动，到边缘会弹起。\nPC：WASD 移动 / P 膜 / 右键拖动环视\n1～5 景色 / Space 漂浮 / M 菜单",
+  "zh_hant": "左搖桿：在泡內輕輕移動，到邊緣會彈起。\nPC：WASD 移動 / P 膜 / 右鍵拖動環視\n1～5 景色 / Space 漂浮 / M 選單",
+  "ko": "왼쪽 스틱: 거품 안에서 살며시 이동, 끝에서 튕김.\nPC: WASD 이동 / P 막 / 오른쪽 드래그 시점\n1~5 풍경 / Space 부유 / M 메뉴",
+  "ru": "Лев. стик: мягкое движение, у края — пружинка.\nПК: WASD / P мембрана / прав. кнопка — обзор\n1–5 сцены / Space парить / M меню"
+ },
+ "btn_back": {
+  "ja": "←    景色を選ぶ",
+  "en": "←    Choose a scene",
+  "zh_hans": "←    选择景色",
+  "zh_hant": "←    選擇景色",
+  "ko": "←    풍경 고르기",
+  "ru": "←    Выбрать сцену"
+ },
+ "avatar_title": {
+  "ja": "自分の姿：",
+  "en": "Your look: ",
+  "zh_hans": "自己的形象：",
+  "zh_hant": "自己的形象：",
+  "ko": "내 모습: ",
+  "ru": "Ваш вид: "
+ },
+ "plush_hands": {
+  "ja": "ぬいぐるみの手",
+  "en": "Plush hands",
+  "zh_hans": "毛绒手",
+  "zh_hant": "絨毛手",
+  "ko": "봉제 손",
+  "ru": "Плюшевые лапки"
+ },
+ "sample_badge": {
+  "ja": "Godette（サンプル）",
+  "en": "Godette (sample)",
+  "zh_hans": "Godette（示例）",
+  "zh_hant": "Godette（範例）",
+  "ko": "Godette (샘플)",
+  "ru": "Godette (пример)"
+ },
+ "btn_prev": {
+  "ja": "← 前",
+  "en": "← Prev",
+  "zh_hans": "← 上一页",
+  "zh_hant": "← 上一頁",
+  "ko": "← 이전",
+  "ru": "← Назад"
+ },
+ "btn_next": {
+  "ja": "次 →",
+  "en": "Next →",
+  "zh_hans": "下一页 →",
+  "zh_hant": "下一頁 →",
+  "ko": "다음 →",
+  "ru": "Далее →"
+ },
+ "btn_import": {
+  "ja": "VRMを追加",
+  "en": "Add VRM",
+  "zh_hans": "添加 VRM",
+  "zh_hant": "新增 VRM",
+  "ko": "VRM 추가",
+  "ru": "Добавить VRM"
+ },
+ "btn_refresh": {
+  "ja": "一覧を更新",
+  "en": "Refresh list",
+  "zh_hans": "刷新列表",
+  "zh_hant": "重新整理清單",
+  "ko": "목록 새로고침",
+  "ru": "Обновить список"
+ },
+ "btn_smaller": {
+  "ja": "小さく",
+  "en": "Smaller",
+  "zh_hans": "变小",
+  "zh_hant": "變小",
+  "ko": "작게",
+  "ru": "Меньше"
+ },
+ "btn_larger": {
+  "ja": "大きく",
+  "en": "Bigger",
+  "zh_hans": "变大",
+  "zh_hant": "變大",
+  "ko": "크게",
+  "ru": "Больше"
+ },
+ "btn_calibrate": {
+  "ja": "腕を広げて体格を合わせる",
+  "en": "Spread your arms to match your size",
+  "zh_hans": "张开手臂匹配体型",
+  "zh_hant": "張開手臂匹配體型",
+  "ko": "팔을 벌려 체형 맞추기",
+  "ru": "Разведите руки, чтобы подогнать рост"
+ },
+ "btn_sit": {
+  "ja": "女の子座り",
+  "en": "Sit like a girl",
+  "zh_hans": "女生坐姿",
+  "zh_hant": "女生坐姿",
+  "ko": "여자아이 앉기",
+  "ru": "Сесть по-девичьи"
+ },
+ "btn_sit2": {
+  "ja": "足を前に",
+  "en": "Feet forward",
+  "zh_hans": "脚朝前",
+  "zh_hant": "腳朝前",
+  "ko": "발을 앞으로",
+  "ru": "Ноги вперёд"
+ },
+ "sit_style1": {
+  "ja": "座り方：女の子座り",
+  "en": "Sitting: girl style",
+  "zh_hans": "坐姿：女生坐姿",
+  "zh_hant": "坐姿：女生坐姿",
+  "ko": "앉기: 여자아이 스타일",
+  "ru": "Поза: по-девичьи"
+ },
+ "sit_style0": {
+  "ja": "座り方：足を前に",
+  "en": "Sitting: feet forward",
+  "zh_hans": "坐姿：脚朝前",
+  "zh_hant": "坐姿：腳朝前",
+  "ko": "앉기: 발을 앞으로",
+  "ru": "Поза: ноги вперёд"
+ },
+ "btn_recenter": {
+  "ja": "目線と正面を合わせる",
+  "en": "Align gaze and facing",
+  "zh_hans": "对齐视线与正面",
+  "zh_hant": "對齊視線與正面",
+  "ko": "시선과 정면 맞추기",
+  "ru": "Выровнять взгляд"
+ },
+ "avatar_note_default": {
+  "ja": "VRMを追加して、自分の姿で過ごせます。",
+  "en": "Add a VRM and spend time as yourself.",
+  "zh_hans": "添加 VRM，就能以自己的形象度过。",
+  "zh_hant": "新增 VRM，就能以自己的形象度過。",
+  "ko": "VRM을 추가하면 내 모습으로 지낼 수 있어요.",
+  "ru": "Добавьте VRM и проводите время как свой персонаж."
+ },
+ "avatar_note_drag": {
+  "ja": "VRMを追加して選択。PCではVRMを画面へドラッグしても追加できます。",
+  "en": "Add and choose a VRM. On PC you can also drag a VRM onto the window.",
+  "zh_hans": "添加并选择 VRM。PC 上也可将 VRM 拖入窗口。",
+  "zh_hant": "新增並選擇 VRM。PC 上也可將 VRM 拖入視窗。",
+  "ko": "VRM을 추가해 선택하세요. PC에서는 VRM을 창으로 끌어도 됩니다.",
+  "ru": "Добавьте и выберите VRM. На ПК можно перетащить VRM в окно."
+ },
+ "credit_sample": {
+  "ja": "サンプル：Godette / SirRichard94・Lyuma / CC BY 3.0",
+  "en": "Sample: Godette / SirRichard94・Lyuma / CC BY 3.0",
+  "zh_hans": "示例：Godette / SirRichard94・Lyuma / CC BY 3.0",
+  "zh_hant": "範例：Godette / SirRichard94・Lyuma / CC BY 3.0",
+  "ko": "샘플: Godette / SirRichard94·Lyuma / CC BY 3.0",
+  "ru": "Пример: Godette / SirRichard94・Lyuma / CC BY 3.0"
+ },
+ "mirror_caption": {
+  "ja": "鏡  /  右手は右コン・左手は左コン",
+  "en": "Mirror — right hand = right controller, left = left",
+  "zh_hans": "镜子 / 右手用右手柄，左手用左手柄",
+  "zh_hant": "鏡子 / 右手用右手柄，左手用左手柄",
+  "ko": "거울 / 오른손=오른쪽 컨트롤러, 왼손=왼쪽",
+  "ru": "Зеркало — правая рука = правый контроллер, левая = левый"
+ },
+ "cal_countdown": {
+  "ja": "腕を肩の高さで左右に広げてください  %d",
+  "en": "Spread your arms sideways at shoulder height  %d",
+  "zh_hans": "请将双臂向两侧抬到与肩同高  %d",
+  "zh_hant": "請將雙臂向兩側抬到與肩同高  %d",
+  "ko": "팔을 어깨 높이로 양옆으로 벌리세요  %d",
+  "ru": "Разведите руки в стороны на высоте плеч  %d"
+ },
+ "cal_aborted": {
+  "ja": "体格合わせを中止しました。メニューから再開できます。",
+  "en": "Size fitting cancelled. Restart from the menu.",
+  "zh_hans": "体型匹配已取消。可从菜单重新开始。",
+  "zh_hant": "體型匹配已取消。可從選單重新開始。",
+  "ko": "체형 맞추기가 취소됐어요. 메뉴에서 다시 시작할 수 있어요.",
+  "ru": "Подгонка отменена. Можно начать заново из меню."
+ },
+ "note_eye_centered": {
+  "ja": "目線と正面を合わせました。",
+  "en": "Gaze and facing aligned.",
+  "zh_hans": "视线与正面已对齐。",
+  "zh_hant": "視線與正面已對齊。",
+  "ko": "시선과 정면을 맞췄어요.",
+  "ru": "Взгляд выровнен."
+ },
+ "note_size_pct": {
+  "ja": "体の大きさ：%d%%",
+  "en": "Body size: %d%%",
+  "zh_hans": "体型大小：%d%%",
+  "zh_hant": "體型大小：%d%%",
+  "ko": "몸 크기: %d%%",
+  "ru": "Размер тела: %d%%"
+ },
+ "note_cal_done": {
+  "ja": "目線と正面を合わせました。体格は腕を広げて合わせられます。",
+  "en": "Gaze aligned. Match your size by spreading your arms.",
+  "zh_hans": "视线已对齐。张开手臂即可匹配体型。",
+  "zh_hant": "視線已對齊。張開手臂即可匹配體型。",
+  "ko": "시선을 맞췄어요. 팔을 벌려 체형을 맞출 수 있어요.",
+  "ru": "Взгляд выровнен. Подгоните рост, разведя руки."
+ },
+ "note_need_controllers": {
+  "ja": "左右のコントローラーを見える位置に出してください。",
+  "en": "Hold both controllers where you can see them.",
+  "zh_hans": "请把两个手柄放在看得见的位置。",
+  "zh_hant": "請把兩個手柄放在看得見的位置。",
+  "ko": "양쪽 컨트롤러를 보이는 위치에 두세요.",
+  "ru": "Покажите оба контроллера в поле зрения."
+ },
+ "note_raise_arms": {
+  "ja": "腕を肩の高さで左右に広げてください。座ったままで大丈夫です。",
+  "en": "Spread your arms sideways at shoulder height. Sitting is fine.",
+  "zh_hans": "请将双臂向两侧抬到与肩同高。坐着也可以。",
+  "zh_hant": "請將雙臂向兩側抬到與肩同高。坐著也可以。",
+  "ko": "팔을 어깨 높이로 양옆으로 벌리세요. 앉은 채로도 괜찮아요.",
+  "ru": "Разведите руки в стороны на высоте плеч. Можно сидя."
+ },
+ "note_fit_failed": {
+  "ja": "体格を測れませんでした。腕をまっすぐ広げて、もう一度お試しください。",
+  "en": "Couldn't measure your size. Straighten your arms and try again.",
+  "zh_hans": "无法测量体型。请伸直手臂再试一次。",
+  "zh_hant": "無法測量體型。請伸直手臂再試一次。",
+  "ko": "체형을 측정하지 못했어요. 팔을 쭉 펴고 다시 시도하세요.",
+  "ru": "Не удалось измерить. Вытяните руки и попробуйте снова."
+ },
+ "note_fit_done": {
+  "ja": "体格を合わせました。鏡で左右の手と肩の位置を確認できます。",
+  "en": "Size matched. Check your hands and shoulders in the mirror.",
+  "zh_hans": "体型已匹配。可在镜中确认左右手与肩膀的位置。",
+  "zh_hant": "體型已匹配。可在鏡中確認左右手與肩膀的位置。",
+  "ko": "체형을 맞췄어요. 거울에서 손과 어깨를 확인할 수 있어요.",
+  "ru": "Размер подобран. Проверьте руки и плечи в зеркале."
+ },
+ "err_humanoid_missing": {
+  "ja": "Humanoidの骨が見つかりませんでした。",
+  "en": "No Humanoid bones found.",
+  "zh_hans": "未找到 Humanoid 骨骼。",
+  "zh_hant": "未找到 Humanoid 骨骼。",
+  "ko": "Humanoid 뼈를 찾지 못했어요.",
+  "ru": "Кости Humanoid не найдены."
+ },
+ "err_limbs_missing": {
+  "ja": "頭・腕のHumanoid設定が足りません（%s）。",
+  "en": "Head/arm Humanoid settings are missing (%s).",
+  "zh_hans": "头部/手臂的 Humanoid 设置不足（%s）。",
+  "zh_hant": "頭部/手臂的 Humanoid 設定不足（%s）。",
+  "ko": "머리·팔 Humanoid 설정이 부족해요 (%s).",
+  "ru": "Не хватает настроек Humanoid для головы/рук (%s)."
+ },
+ "err_height": {
+  "ja": "アバターの身長を確認できませんでした。",
+  "en": "Couldn't read the avatar's height.",
+  "zh_hans": "无法确认角色的身高。",
+  "zh_hant": "無法確認角色的身高。",
+  "ko": "아바타 키를 확인하지 못했어요.",
+  "ru": "Не удалось определить рост аватара."
+ },
+ "err_open_limit": {
+  "ja": "ファイルを開けませんでした（上限128MB）。",
+  "en": "Couldn't open the file (limit 128 MB).",
+  "zh_hans": "无法打开文件（上限 128MB）。",
+  "zh_hant": "無法開啟檔案（上限 128MB）。",
+  "ko": "파일을 열 수 없어요 (128MB 제한).",
+  "ru": "Не удалось открыть файл (лимит 128 МБ)."
+ },
+ "err_mkdir": {
+  "ja": "アバターの保存先を作れませんでした。",
+  "en": "Couldn't create the avatar folder.",
+  "zh_hans": "无法创建角色的保存位置。",
+  "zh_hant": "無法建立角色的儲存位置。",
+  "ko": "아바타 저장 폴더를 만들지 못했어요.",
+  "ru": "Не удалось создать папку для аватара."
+ },
+ "err_save": {
+  "ja": "アバターを保存できませんでした。",
+  "en": "Couldn't save the avatar.",
+  "zh_hans": "无法保存角色。",
+  "zh_hant": "無法儲存角色。",
+  "ko": "아바타를 저장하지 못했어요.",
+  "ru": "Не удалось сохранить аватар."
+ },
+ "err_save_failed": {
+  "ja": "アバターの保存に失敗しました。",
+  "en": "Saving the avatar failed.",
+  "zh_hans": "保存角色失败。",
+  "zh_hant": "儲存角色失敗。",
+  "ko": "아바타 저장에 실패했어요.",
+  "ru": "Ошибка сохранения аватара."
+ },
+ "err_vrm_size": {
+  "ja": "VRMのサイズが不正です（上限128MB）。",
+  "en": "The VRM size is invalid (limit 128 MB).",
+  "zh_hans": "VRM 大小无效（上限 128MB）。",
+  "zh_hant": "VRM 大小無效（上限 128MB）。",
+  "ko": "VRM 크기가 올바르지 않아요 (128MB 제한).",
+  "ru": "Неверный размер VRM (лимит 128 МБ)."
+ },
+ "err_not_vrm": {
+  "ja": "VRM形式のファイルを選んでください。",
+  "en": "Choose a VRM file.",
+  "zh_hans": "请选择 VRM 格式的文件。",
+  "zh_hant": "請選擇 VRM 格式的檔案。",
+  "ko": "VRM 형식 파일을 선택하세요.",
+  "ru": "Выберите файл в формате VRM."
+ },
+ "err_corrupt": {
+  "ja": "VRMのデータが壊れています。",
+  "en": "The VRM data is corrupted.",
+  "zh_hans": "VRM 数据已损坏。",
+  "zh_hant": "VRM 資料已損壞。",
+  "ko": "VRM 데이터가 손상됐어요.",
+  "ru": "Данные VRM повреждены."
+ },
+ "err_no_info": {
+  "ja": "VRMの情報を読めませんでした。",
+  "en": "Couldn't read the VRM info.",
+  "zh_hans": "无法读取 VRM 信息。",
+  "zh_hant": "無法讀取 VRM 資訊。",
+  "ko": "VRM 정보를 읽지 못했어요.",
+  "ru": "Не удалось прочитать данные VRM."
+ },
+ "err_vrm_version": {
+  "ja": "VRM 0.x または1.0のアバターを選んでください。",
+  "en": "Choose a VRM 0.x or 1.0 avatar.",
+  "zh_hans": "请选择 VRM 0.x 或 1.0 的角色。",
+  "zh_hant": "請選擇 VRM 0.x 或 1.0 的角色。",
+  "ko": "VRM 0.x 또는 1.0 아바타를 선택하세요.",
+  "ru": "Выберите аватар VRM 0.x или 1.0."
+ },
+ "err_no_image": {
+  "ja": "画像を内蔵したVRMで書き出してください。",
+  "en": "Export the VRM with its texture embedded.",
+  "zh_hans": "请导出内置图片的 VRM。",
+  "zh_hant": "請匯出內建圖片的 VRM。",
+  "ko": "이미지가 내장된 VRM으로 내보내세요.",
+  "ru": "Экспортируйте VRM со встроенной текстурой."
+ },
+ "err_open_again": {
+  "ja": "ファイルを開けませんでした。もう一度選んでください。",
+  "en": "Couldn't open the file. Please choose again.",
+  "zh_hans": "无法打开文件。请重新选择。",
+  "zh_hant": "無法開啟檔案。請重新選擇。",
+  "ko": "파일을 열 수 없어요. 다시 선택하세요.",
+  "ru": "Не удалось открыть файл. Выберите снова."
+ },
+ "err_too_big": {
+  "ja": "VRMが大きすぎます（上限128MB）。",
+  "en": "The VRM is too large (limit 128 MB).",
+  "zh_hans": "VRM 太大（上限 128MB）。",
+  "zh_hant": "VRM 太大（上限 128MB）。",
+  "ko": "VRM이 너무 커요 (128MB 제한).",
+  "ru": "VRM слишком большой (лимит 128 МБ)."
+ },
+ "err_load_avatar": {
+  "ja": "このVRMを読み込めませんでした。別のVRMを試してください。",
+  "en": "Couldn't load this VRM. Try another one.",
+  "zh_hans": "无法读取这个 VRM。请试试其他 VRM。",
+  "zh_hant": "無法讀取這個 VRM。請試試其他 VRM。",
+  "ko": "이 VRM을 불러오지 못했어요. 다른 VRM을 시도하세요.",
+  "ru": "Не удалось загрузить VRM. Попробуйте другой."
+ },
+ "sample_loaded": {
+  "ja": "読み込み済み：サンプルの一人称アバター",
+  "en": "Loaded: the sample first-person avatar",
+  "zh_hans": "已加载：示例的第一人称形象",
+  "zh_hant": "已載入：範例的第一人稱形象",
+  "ko": "로드됨: 샘플 1인칭 아바타",
+  "ru": "Загружен: примерный аватар от первого лица"
+ },
+ "need_vrm_first": {
+  "ja": "先にVRMを選ぶと、鏡で全身を見られます。",
+  "en": "Choose a VRM first to see your whole body in the mirror.",
+  "zh_hans": "请先选择 VRM，就能在镜中看到全身。",
+  "zh_hant": "請先選擇 VRM，就能在鏡中看到全身。",
+  "ko": "VRM을 먼저 고르면 거울에서 전신을 볼 수 있어요.",
+  "ru": "Сначала выберите VRM, чтобы увидеть себя в зеркале."
+ },
+ "picker_title": {
+  "ja": "VRMアバターを選ぶ",
+  "en": "Choose a VRM avatar",
+  "zh_hans": "选择 VRM 形象",
+  "zh_hant": "選擇 VRM 形象",
+  "ko": "VRM 아바타 고르기",
+  "ru": "Выберите VRM-аватар"
+ },
+ "pc_transfer": {
+  "ja": "PCからVRMを転送して「一覧を更新」を押してください。READMEに転送方法があります。",
+  "en": "Transfer a VRM from your PC and press \"Refresh list\". See the README.",
+  "zh_hans": "请从电脑传输 VRM，然后按「刷新列表」。方法见 README。",
+  "zh_hant": "請從電腦傳輸 VRM，然後按「重新整理清單」。方法見 README。",
+  "ko": "PC에서 VRM을 옮기고 「목록 새로고침」을 누르세요. 방법은 README에 있어요.",
+  "ru": "Перенесите VRM с ПК и нажмите «Обновить список». См. README."
+ },
+ "back_to_plush": {
+  "ja": "ぬいぐるみの手に戻しました。",
+  "en": "Back to plush hands.",
+  "zh_hans": "已回到毛绒手。",
+  "zh_hant": "已回到絨毛手。",
+  "ko": "봉제 손으로 돌아갔어요.",
+  "ru": "Снова плюшевые лапки."
+ },
+ "loading_avatar": {
+  "ja": "アバターを読み込んでいます…",
+  "en": "Loading the avatar…",
+  "zh_hans": "正在加载形象…",
+  "zh_hant": "正在載入形象…",
+  "ko": "아바타를 불러오는 중…",
+  "ru": "Загрузка аватара…"
+ },
+ "avatar_loaded": {
+  "ja": "読み込みました。見下ろすと自分の体が見えます。",
+  "en": "Loaded. Look down to see your body.",
+  "zh_hans": "已加载。低头就能看到自己的身体。",
+  "zh_hant": "已載入。低頭就能看到自己的身體。",
+  "ko": "불러왔어요. 아래를 보면 내 몸이 보여요.",
+  "ru": "Загружено. Посмотрите вниз, чтобы увидеть себя."
+ },
+ "lang_title": {
+  "ja": "表示言語 / Language",
+  "en": "Display language",
+  "zh_hans": "显示语言",
+  "zh_hant": "顯示語言",
+  "ko": "표시 언어",
+  "ru": "Язык интерфейса"
+ },
+ "lang_ja": {
+  "ja": "日本語",
+  "en": "日本語 (Japanese)",
+  "zh_hans": "日本語（日语）",
+  "zh_hant": "日本語（日語）",
+  "ko": "일본어",
+  "ru": "日本語 (японский)"
+ },
+ "lang_en": {
+  "ja": "English",
+  "en": "English",
+  "zh_hans": "English（英语）",
+  "zh_hant": "English（英語）",
+  "ko": "영어",
+  "ru": "English (английский)"
+ },
+ "lang_zh_hans": {
+  "ja": "简体中文",
+  "en": "简体中文 (Chinese)",
+  "zh_hans": "简体中文",
+  "zh_hant": "简体中文",
+  "ko": "중국어 간체",
+  "ru": "简体中文 (китайский)"
+ },
+ "lang_zh_hant": {
+  "ja": "繁體中文",
+  "en": "繁體中文 (Chinese)",
+  "zh_hans": "繁體中文",
+  "zh_hant": "繁體中文",
+  "ko": "중국어 번체",
+  "ru": "繁體中文 (китайский)"
+ },
+ "lang_ko": {
+  "ja": "한국어",
+  "en": "한국어 (Korean)",
+  "zh_hans": "한국어（韩语）",
+  "zh_hant": "한국어（韓語）",
+  "ko": "한국어",
+  "ru": "한국어 (корейский)"
+ },
+ "lang_ru": {
+  "ja": "Русский",
+  "en": "Русский (Russian)",
+  "zh_hans": "Русский（俄语）",
+  "zh_hant": "Русский（俄語）",
+  "ko": "러시아어",
+  "ru": "Русский"
+ }
+}

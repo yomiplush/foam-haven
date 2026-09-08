@@ -11,7 +11,7 @@ var body_yaw := 0.0
 var calibrated := false
 var size_multiplier := 1.0
 var current_path := ""
-var display_name := "ぬいぐるみの手"
+var display_name := ""
 var last_error := ""
 var rest_body_basis := Basis.IDENTITY
 var skeleton_body_basis := Basis.IDENTITY
@@ -20,6 +20,9 @@ var hand_anatomy: Array[Dictionary] = []
 var fitted_eye_height := 1.55
 var sitting_style := 1 # 0: feet forward, 1: knees forward with feet beside hips.
 var last_calibration_note := ""
+
+func _ready():
+	display_name = I18n.t("plush_hands")
 
 func is_loaded() -> bool:
 	return is_instance_valid(model)
@@ -34,7 +37,7 @@ func load_avatar(path: String) -> bool:
 	var candidate_skeleton: Skeleton3D = candidate.find_child("GeneralSkeleton", true, false)
 	if candidate_skeleton == null:
 		candidate.free()
-		last_error = "Humanoidの骨が見つかりませんでした。"
+		last_error = I18n.t("err_humanoid_missing")
 		return false
 	var mapping: BoneMap = candidate.vrm_meta.humanoid_bone_mapping
 	var mapped: Dictionary = {}
@@ -47,7 +50,7 @@ func load_avatar(path: String) -> bool:
 	for required in ["Hips", "Head", "LeftUpperArm", "LeftLowerArm", "LeftHand", "RightUpperArm", "RightLowerArm", "RightHand"]:
 		if mapped[required] < 0:
 			candidate.free()
-			last_error = "頭・腕のHumanoid設定が足りません（%s）。" % required
+			last_error = I18n.tf("err_limbs_missing", [required])
 			return false
 	var candidate_eye := candidate_skeleton.get_bone_global_rest(mapped.Head).origin + Vector3(0, 0.075, 0.065)
 	if mapped.LeftEye >= 0 and mapped.RightEye >= 0:
@@ -56,7 +59,7 @@ func load_avatar(path: String) -> bool:
 	var local_eye := relative * candidate_eye
 	if not local_eye.is_finite() or local_eye.y < 0.1 or local_eye.y > 10.0:
 		candidate.free()
-		last_error = "アバターの身長を確認できませんでした。"
+		last_error = I18n.t("err_height")
 		return false
 	# All validation precedes replacement, so a bad file cannot remove a good avatar.
 	unload_avatar()
@@ -86,7 +89,7 @@ func unload_avatar():
 	skeleton = null
 	bones.clear()
 	current_path = ""
-	display_name = "ぬいぐるみの手"
+	display_name = I18n.t("plush_hands")
 	calibrated = false
 	hand_anatomy.clear()
 
@@ -98,11 +101,11 @@ func calibrate(head: Transform3D):
 	scale = Vector3.ONE * normalized_scale
 	body_yaw = atan2(-head.basis.z.x, -head.basis.z.z)
 	calibrated = true
-	last_calibration_note = "目線と正面を合わせました。体格は腕を広げて合わせられます。"
+	last_calibration_note = I18n.t("note_cal_done")
 
 func fit_to_arms(head: Transform3D, hands: Array[Transform3D], tracked: Array[bool]) -> bool:
 	if not is_loaded() or hands.size() != 2 or tracked.size() != 2 or not tracked[0] or not tracked[1]:
-		last_calibration_note = "左右のコントローラーを見える位置に出してください。"
+		last_calibration_note = I18n.t("note_need_controllers")
 		return false
 	var span := hands[0].origin.distance_to(hands[1].origin)
 	var right := head.basis.x
@@ -110,7 +113,7 @@ func fit_to_arms(head: Transform3D, hands: Array[Transform3D], tracked: Array[bo
 	var vertical := absf(hands[0].origin.y - hands[1].origin.y)
 	var below := head.origin.y - (hands[0].origin.y + hands[1].origin.y) * 0.5
 	if span < 0.75 or vertical > 0.16 or spread.normalized().dot(right) < 0.85 or below < 0.08 or below > 0.55:
-		last_calibration_note = "腕を肩の高さで左右に広げてください。座ったままで大丈夫です。"
+		last_calibration_note = I18n.t("note_raise_arms")
 		return false
 	var rest_left: Vector3 = skeleton.get_bone_global_rest(bones.LeftHand) * hand_anatomy[0].palm_anchor
 	var rest_right: Vector3 = skeleton.get_bone_global_rest(bones.RightHand) * hand_anatomy[1].palm_anchor
@@ -119,12 +122,12 @@ func fit_to_arms(head: Transform3D, hands: Array[Transform3D], tracked: Array[bo
 	var fitted := span / maxf(rest_span, 0.1)
 	var eye_height := rest_eye.y * fitted
 	if eye_height < 0.85 or eye_height > 2.2:
-		last_calibration_note = "体格を測れませんでした。腕をまっすぐ広げて、もう一度お試しください。"
+		last_calibration_note = I18n.t("note_fit_failed")
 		return false
 	fitted_eye_height = eye_height
 	size_multiplier = 1.0
 	calibrate(head)
-	last_calibration_note = "体格を合わせました。鏡で左右の手と肩の位置を確認できます。"
+	last_calibration_note = I18n.t("note_fit_done")
 	print("FOAM_CALIBRATED: palm_span=", snappedf(span,0.001), " eye_height=", snappedf(fitted_eye_height,0.001))
 	return true
 

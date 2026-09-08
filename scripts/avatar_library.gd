@@ -9,7 +9,7 @@ static func incoming_dir() -> String:
 	return ProjectSettings.globalize_path(USER_DIR)
 
 static func entries() -> Array[Dictionary]:
-	var result: Array[Dictionary] = [{"path": "", "name": "ぬいぐるみの手"}, {"path": SAMPLE, "name": "Godette（サンプル）"}]
+	var result: Array[Dictionary] = [{"path": "", "name": I18n.t("plush_hands")}, {"path": SAMPLE, "name": I18n.t("sample_badge")}]
 	var directories := [ProjectSettings.globalize_path(USER_DIR)]
 	if incoming_dir() != directories[0]:
 		directories.append(incoming_dir())
@@ -30,7 +30,7 @@ static func import_copy(path: String) -> Dictionary:
 		return {"path": path}
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null or file.get_length() > Loader.MAX_BYTES:
-		return {"error": "ファイルを開けませんでした（上限128MB）。"}
+		return {"error": I18n.t("err_open_limit")}
 	var bytes := file.get_buffer(file.get_length())
 	file.close()
 	var inspected := Loader.inspect_bytes(bytes)
@@ -45,15 +45,15 @@ static func import_copy(path: String) -> Dictionary:
 		filename = "Avatar"
 	var dir := ProjectSettings.globalize_path(USER_DIR)
 	if DirAccess.make_dir_recursive_absolute(dir) != OK:
-		return {"error": "アバターの保存先を作れませんでした。"}
+		return {"error": I18n.t("err_mkdir")}
 	var destination := dir.path_join(filename + "-" + digest + ".vrm")
 	if not FileAccess.file_exists(destination):
 		var output := FileAccess.open(destination, FileAccess.WRITE)
 		if output == null:
-			return {"error": "アバターを保存できませんでした。"}
+			return {"error": I18n.t("err_save")}
 		output.store_buffer(bytes)
 		var error := output.get_error()
 		output.close()
 		if error != OK:
-			return {"error": "アバターの保存に失敗しました。"}
+			return {"error": I18n.t("err_save_failed")}
 	return {"path": destination}

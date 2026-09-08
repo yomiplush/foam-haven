@@ -49,13 +49,20 @@ func _ready():
 		_frame_piece(Vector3(side*(SIZE.x+0.035)*0.5,0,0.02), Vector3(0.035,SIZE.y+0.07,0.055), trim)
 		_frame_piece(Vector3(0,side*(SIZE.y+0.035)*0.5,0.02), Vector3(SIZE.x+0.07,0.035,0.055), trim)
 	caption = Label3D.new()
-	caption.font = preload("res://assets/japanese.ttf")
-	caption.text = "鏡  /  右手は右コン・左手は左コン"
+	caption.font = I18n.font()
+	caption.text = I18n.t("mirror_caption")
 	caption.font_size = 26
 	caption.pixel_size = 0.0012
 	caption.position = Vector3(0, SIZE.y*0.5+0.065,0.03)
 	add_child(caption)
+	I18n.language_changed.connect(func(_code): _refresh_language())
 	hide()
+
+func _refresh_language():
+	if is_instance_valid(caption):
+		caption.font = I18n.font()
+		if caption.text in I18n.variants("mirror_caption") or caption.text.is_empty():
+			caption.text = I18n.t("mirror_caption")
 
 func _frame_piece(at: Vector3, dimensions: Vector3, mat: Material):
 	var mesh := BoxMesh.new()
