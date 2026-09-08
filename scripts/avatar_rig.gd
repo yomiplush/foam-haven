@@ -18,7 +18,6 @@ var skeleton_body_basis := Basis.IDENTITY
 var head_local_frame := Basis.IDENTITY
 var hand_anatomy: Array[Dictionary] = []
 var fitted_eye_height := 1.55
-var sitting_style := 1 # 0: feet forward, 1: knees forward with feet beside hips.
 var last_calibration_note := ""
 
 func _ready():
@@ -142,12 +141,16 @@ func update_pose(head: Transform3D, hands: Array[Transform3D], tracked: Array[bo
 		calibrate(head)
 	var forward := -head.basis.z
 	forward.y = 0.0
-	if forward.length_squared() > 0.04:
+	if forward.length_squared() > 0.001:
 		var wanted := atan2(forward.x, forward.z)
-		# A human can look sideways without rotating their hips and shoulders with every glance.
-		var difference := wrapf(wanted - body_yaw, -PI, PI)
-		if absf(difference) > deg_to_rad(55):
-			body_yaw = lerp_angle(body_yaw, wanted - signf(difference) * deg_to_rad(35), 1.0 - exp(-delta * 3.0))
+		# VRChat-style torso: the body drifts toward the gaze with a soft lag.
+		# Brief glances stay in the neck; a held turn lets the shoulders catch
+		# up, and they settle back as the head returns. No hard threshold snap.
+		var diff := wrapf(wanted - body_yaw, -PI, PI)
+		var magnitude := absf(diff)
+		if magnitude > deg_to_rad(6.0):
+			var rate := 0.9 + 3.2 * clampf(magnitude / deg_to_rad(70.0), 0.0, 1.0)
+			body_yaw = lerp_angle(body_yaw, wanted, 1.0 - exp(-delta * rate))
 	var body_scale := clampf(fitted_eye_height / rest_eye.y, 0.15, 5.0) * size_multiplier
 	basis = (Basis(Vector3.UP, body_yaw) * rest_body_basis.inverse()).scaled(Vector3.ONE * body_scale)
 	global_position = head.origin - global_basis * rest_eye
@@ -176,10 +179,10 @@ func update_pose(head: Transform3D, hands: Array[Transform3D], tracked: Array[bo
 		var hand_pose := skeleton.get_bone_global_pose(hand_id)
 		hand_pose.basis = hand_basis
 		skeleton.set_bone_global_pose(hand_id, hand_pose)
-		# Floor-level feet bend the knees naturally when the user is sitting.
+		# Always keep the knees together, feet tucked girl-style.
 		var foot: int = bones[side + "Foot"]
 		if foot >= 0 and bones[side + "UpperLeg"] >= 0 and bones[side + "LowerLeg"] >= 0:
-			_pose_leg(side, sign_side, head, inv)
+			_pose_leg(side, sign_side, inv)
 
 func _distribute_forearm_twist(lower: int, hand: int, desired: Basis, dorsal_local: Vector3):
 	var elbow := skeleton.get_bone_global_pose(lower)
@@ -195,32 +198,27 @@ func _distribute_forearm_twist(lower: int, hand: int, desired: Basis, dorsal_loc
 	elbow.basis = Basis(axis, clampf(twist, -PI*0.7, PI*0.7) * 0.65) * elbow.basis
 	skeleton.set_bone_global_pose(lower, elbow)
 
-func _pose_leg(side: String, sign_side: float, head: Transform3D, inv: Transform3D):
+func _pose_leg(side: String, sign_side: float, inv: Transform3D):
+	# Always the "girl sit": knees forward and together, feet folded back so
+	# the soles rest beside the hips. Sitting is fixed, whatever the eye height.
 	var upper: int = bones[side + "UpperLeg"]
 	var lower: int = bones[side + "LowerLeg"]
 	var foot: int = bones[side + "Foot"]
-	var foot_world := skeleton.to_global(skeleton.get_bone_global_rest(foot).origin)
-	if foot_world.y >= 0.045:
-		return
-	var seated := head.origin.y < fitted_eye_height * size_multiplier * 0.75
 	var forward := Basis(Vector3.UP, body_yaw).z
 	var left := Basis(Vector3.UP, body_yaw).x
+	var up := Basis(Vector3.UP, body_yaw).y
 	var hip_world := skeleton.to_global(skeleton.get_bone_global_pose(upper).origin)
-	if seated and sitting_style == 1:
-		foot_world = hip_world + left * sign_side * 0.21 * size_multiplier - forward * 0.10 * size_multiplier
-		foot_world.y = 0.065
-	else:
-		foot_world.y = 0.055
-		foot_world += forward * (0.42 if seated else 0.12) * size_multiplier
-	_solve_limb(upper, lower, foot, inv * foot_world, skeleton_body_basis * Vector3(sign_side * 0.05, -0.05, 1))
-	if seated:
-		var pose := skeleton.get_bone_global_pose(foot)
-		var rest := skeleton.get_bone_global_rest(foot)
-		var toes := -forward if sitting_style == 1 else forward
-		var desired := Basis.looking_at(-toes, Vector3.UP)
-		var rest_frame := rest.basis.orthonormalized().inverse() * skeleton_body_basis
-		pose.basis = (skeleton.global_basis.orthonormalized().inverse() * desired * rest_frame.inverse()).orthonormalized()
-		skeleton.set_bone_global_pose(foot, pose)
+	var s := size_multiplier
+	# Feet stay anchored to the hips so a height change cannot pop the legs.
+	var knee_world := hip_world + forward * 0.22 * s - up * 0.02 * s
+	var foot_world := hip_world + forward * 0.04 * s + left * sign_side * 0.085 * s - up * 0.06 * s
+	_solve_limb(upper, lower, foot, inv * foot_world, inv * knee_world)
+	var pose := skeleton.get_bone_global_pose(foot)
+	var rest := skeleton.get_bone_global_rest(foot)
+	var desired := Basis.looking_at(forward, Vector3.UP)
+	var rest_frame := rest.basis.orthonormalized().inverse() * skeleton_body_basis
+	pose.basis = (skeleton.global_basis.orthonormalized().inverse() * desired * rest_frame.inverse()).orthonormalized()
+	skeleton.set_bone_global_pose(foot, pose)
 
 func _solve_limb(upper: int, lower: int, tip: int, target: Vector3, pole: Vector3):
 	var a := skeleton.get_bone_global_pose(upper)

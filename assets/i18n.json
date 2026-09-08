@@ -431,38 +431,6 @@
   "ko": "팔을 벌려 체형 맞추기",
   "ru": "Разведите руки, чтобы подогнать рост"
  },
- "btn_sit": {
-  "ja": "女の子座り",
-  "en": "Sit like a girl",
-  "zh_hans": "女生坐姿",
-  "zh_hant": "女生坐姿",
-  "ko": "여자아이 앉기",
-  "ru": "Сесть по-девичьи"
- },
- "btn_sit2": {
-  "ja": "足を前に",
-  "en": "Feet forward",
-  "zh_hans": "脚朝前",
-  "zh_hant": "腳朝前",
-  "ko": "발을 앞으로",
-  "ru": "Ноги вперёд"
- },
- "sit_style1": {
-  "ja": "座り方：女の子座り",
-  "en": "Sitting: girl style",
-  "zh_hans": "坐姿：女生坐姿",
-  "zh_hant": "坐姿：女生坐姿",
-  "ko": "앉기: 여자아이 스타일",
-  "ru": "Поза: по-девичьи"
- },
- "sit_style0": {
-  "ja": "座り方：足を前に",
-  "en": "Sitting: feet forward",
-  "zh_hans": "坐姿：脚朝前",
-  "zh_hant": "坐姿：腳朝前",
-  "ko": "앉기: 발을 앞으로",
-  "ru": "Поза: ноги вперёд"
- },
  "btn_recenter": {
   "ja": "目線と正面を合わせる",
   "en": "Align gaze and facing",

@@ -30,7 +30,6 @@ var avatar_entries: Array[Dictionary] = []
 var avatar_rows: Array[Button] = []
 var avatar_offset := 0
 var mirror_buttons: Array[Button] = []
-var sitting_button: Button
 var lang_buttons: Array[Button] = []
 
 func _ready():
@@ -329,20 +328,17 @@ func _make_avatar_page():
 	button(avatar_page, I18n.t("btn_calibrate"), Rect2(290, 690, 700, 62), &"avatar_calibrate")
 	button(avatar_page, I18n.t("btn_larger"), Rect2(1008, 690, 220, 62), &"avatar_larger")
 	mirror_buttons.append(button(avatar_page, I18n.t("btn_mirror_on"), Rect2(52, 766, 370, 62), &"mirror"))
-	sitting_button = button(avatar_page, I18n.t("btn_sit"), Rect2(440, 766, 388, 62), &"avatar_sitting")
-	button(avatar_page, I18n.t("btn_recenter"), Rect2(846, 766, 382, 62), &"avatar_recenter")
+	button(avatar_page, I18n.t("btn_recenter"), Rect2(440, 766, 788, 62), &"avatar_recenter")
 	avatar_note = label(avatar_page, I18n.t("avatar_note_default"), Vector2(54, 838), 20, MUTED)
 	avatar_note.size = Vector2(1170, 43)
 	avatar_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label(avatar_page, I18n.t("credit_sample"), Vector2(54, 976), 14, MUTED)
 	button(avatar_page, I18n.t("btn_back"), Rect2(52, 886, 1176, 80), &"avatar_back")
 
-func update_avatar_tools(mirror_on: bool, sitting_style: int):
+func update_avatar_tools(mirror_on: bool):
 	for control in mirror_buttons:
 		control.text = I18n.t("btn_mirror_off") if mirror_on else I18n.t("btn_mirror_on")
 		_fit(control, 28)
-	sitting_button.text = I18n.t("sit_style1") if sitting_style == 1 else I18n.t("sit_style0")
-	_fit(sitting_button, 28)
 
 func show_avatars(entries: Array[Dictionary], current: String, note: String = ""):
 	set_hover(null)

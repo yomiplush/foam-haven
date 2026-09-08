@@ -255,10 +255,6 @@ func _menu_action(action: StringName, index: int):
 			mirror.place(camera.global_transform)
 			menu.avatar_note.text = I18n.t("note_eye_centered")
 		&"mirror": _toggle_mirror()
-		&"avatar_sitting":
-			avatar.sitting_style = 1 - avatar.sitting_style
-			menu.update_avatar_tools(mirror.enabled, avatar.sitting_style)
-			_save_avatar()
 		&"avatar_smaller", &"avatar_larger":
 			avatar.size_multiplier = clampf(avatar.size_multiplier + (-0.05 if action == &"avatar_smaller" else 0.05), 0.5, 1.5)
 			avatar.calibrate(camera.global_transform)
@@ -279,7 +275,7 @@ func _update_ui():
 		return
 	menu.update_state(scene_index, balloon_mode, membrane_visible, drift, sound_on)
 	if is_instance_valid(avatar) and is_instance_valid(mirror):
-		menu.update_avatar_tools(mirror.enabled, avatar.sitting_style)
+		menu.update_avatar_tools(mirror.enabled)
 	bubble_mat.set_shader_parameter("latex", 1.0 if balloon_mode else 0.0)
 	outer_mat.set_shader_parameter("latex", 1.0 if balloon_mode else 0.0)
 	for mat in [bubble_mat, outer_mat]:
@@ -1002,7 +998,7 @@ func _calibrate_avatar():
 
 func _show_avatars(note: String = ""):
 	menu.show_avatars(AvatarLibrary.entries(), avatar.display_name, note)
-	menu.update_avatar_tools(mirror.enabled, avatar.sitting_style)
+	menu.update_avatar_tools(mirror.enabled)
 
 func _choose_avatar_file():
 	if xr_active and not DisplayServer.has_feature(DisplayServer.FEATURE_NATIVE_DIALOG_FILE):
@@ -1047,7 +1043,6 @@ func _save_avatar():
 	config.set_value("avatar", "path", avatar.current_path)
 	config.set_value("avatar", "size", avatar.size_multiplier)
 	config.set_value("avatar", "fitted_eye_height", avatar.fitted_eye_height)
-	config.set_value("avatar", "sitting_style", avatar.sitting_style)
 	config.save("user://avatar.cfg")
 
 func _restore_avatar():
@@ -1059,7 +1054,6 @@ func _restore_avatar():
 	if config.load("user://avatar.cfg") == OK:
 		avatar.size_multiplier = clampf(float(config.get_value("avatar", "size", 1.0)), 0.5, 1.5)
 		avatar.fitted_eye_height = clampf(float(config.get_value("avatar", "fitted_eye_height", 1.55)),0.85,2.2)
-		avatar.sitting_style = clampi(int(config.get_value("avatar", "sitting_style", 1)),0,1)
 		var path := str(config.get_value("avatar", "path", ""))
 		if not path.is_empty():
 			_load_avatar_file(path)
