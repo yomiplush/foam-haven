@@ -1,0 +1,7 @@
+.godot/
+.build-tools/
+dist/
+android/
+export_presets.cfg
+*.keystore
+*.idsig

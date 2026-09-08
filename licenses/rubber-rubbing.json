@@ -1,0 +1,16 @@
+{
+  "title": "Balloon rubbing",
+  "author": "Huminaatio",
+  "license": "CC0-1.0",
+  "source_url": "https://freesound.org/people/Huminaatio/sounds/266979/",
+  "download_url": "https://cdn.freesound.org/previews/266/266979_1325505-hq.mp3",
+  "source_sha256": "c2f9705a82b3508305279a388d39dd8b442e8a3a8a6df6b28d5225caf11df4d5",
+  "source_excerpt_seconds": [
+    1.5,
+    8.0
+  ],
+  "overlap_seconds": 0.4,
+  "processing": "Mono 32 kHz; 100 Hz high-pass; 2.6 kHz low-pass; soft limiting; equal-power seam; peak 0.30",
+  "output": "assets/rubber_rub.wav",
+  "output_seconds": 6.1
+}

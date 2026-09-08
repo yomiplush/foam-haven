@@ -1,0 +1,22 @@
+{
+  "duck_body": {
+    "vertices": 4319,
+    "triangles": 8634
+  },
+  "dolphin_body": {
+    "vertices": 5744,
+    "triangles": 11484
+  },
+  "cloud_0": {
+    "vertices": 2420,
+    "triangles": 4836
+  },
+  "cloud_1": {
+    "vertices": 2390,
+    "triangles": 4776
+  },
+  "cloud_2": {
+    "vertices": 2344,
+    "triangles": 4684
+  }
+}

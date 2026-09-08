@@ -1,2 +1,98 @@
-# foam-haven
-trapped in the fancy world
+# Foam Haven
+
+Quest 3単体で動く、透明な泡に包まれる小さなVR体験。
+
+## APK
+
+`dist/FoamHaven-Quest3.apk`（署名済み、arm64、パッケージ `jp.yomiplush.foamhaven`）
+
+SideQuestでAPKをインストールするか、USBデバッグを許可して次を実行します。
+
+```sh
+adb install -r dist/FoamHaven-Quest3.apk
+adb shell am start -n jp.yomiplush.foamhaven/com.godot.game.GodotAppLauncher
+```
+
+Questの提供元不明アプリから「Foam Haven」を開けます。インストール後はPCやネット接続不要です。
+
+## 体験と操作
+
+- 青い海、夕焼けの空、風船の部屋を日本語メニューから選択。
+- 二重の透明膜を内側から押すと膨らみ、離すと揺れて戻ります。
+- Touchコントローラーを膜に近づける：膜を押す。触れ始めに軽い振動。
+- グリップ長押し：向けた方向の膜を押す。座っていても届きます。
+- トリガー：メニュー選択。メニューを閉じていると小さな泡を生成。
+- A / X：ゆっくり浮遊する・停止。
+- B / Y：メニュー表示・非表示。メニュー表示時は浮遊停止。
+- スティック押込み：現在の頭の位置に合わせて包む泡を戻す。
+
+素手のハンドトラッキングは未実装です。柔らかさは映像・音・コントローラー振動で表現し、実際の反力はありません。
+起動時は静止。視点の強制回転なし。浮遊は上下8cm・左右5cmの範囲で、停止時は位置が跳びません。
+
+各景色にはループ環境音が流れます。海は波、空は風、部屋はオルゴール。景色の切替は1.2秒でクロスフェードします。膜・泡の生成・メニュー選択には、立ち上がりを丸めた別々のオリジナル効果音を使用。音OFFとフォーカス喪失時は効果音も停止します。
+
+## v0.4.2 の変更
+
+- 内側から正面を見た時にも膜が分かるよう、二重膜の干渉色と反射帯を復旧。シャボン玉は虹色、風船はピンクの透明膜です。
+- 押すと内膜が先に膨らみ、外膜が少し遅れて追従。膜同士の隙間が縮まり、離すとそれぞれ弾性で戻ります。
+- 膜の表示ON/OFF設定は維持します。膜が見えない場合はメニューの膜表示も確認できます。
+
+## v0.4.0 の変更
+
+- 景色を選ぶイラスト付きカードと、独立した操作ガイド。メニュー表示中は膜を隠して読みやすくしました。
+- 膜の全面的な虹色を抑え、反射・接触した部分に色が現れるよう調整。
+- 部屋の中央半径3mと正面の窓への見通しを確保。風船は12個を壁際4グループに整理し、おもちゃも左右・奥へ配置。床を原点の高さへ戻し、揺れは最大7.5cmの設定に抑えています。
+- 木目床、窓の淡い色、ひだのあるカーテン、落ち着いた小物の配色。
+- 球・箱・管の形状共有と、不透明オブジェクトのMultiMesh化。透明な物は個別の描画順を維持。
+- メニュー・音声の責務を `scripts/haven_menu.gd` と `scripts/soundscape.gd` に分離。
+- フォーカスや景色切替をまたぐ入力残り、メニュー中の膜への反応を修正。左右どちらのコントローラーでもメニューを指せます。
+- 浮遊開始ボタンはメニューを閉じて開始。メニューを開くと停止し、視点の位置は跳びません。
+
+## 開発
+
+Godot 4.7.2、OpenXR Vendors 5.1.0、OpenGL Compatibility、Android SDK 36 / target 34 / min 29。
+`android/build` はGodotの同バージョンのAndroid build templateから生成したものです。
+`export_presets.cfg` は署名情報を含むためリポジトリに含めず、`export_presets.example.cfg` をコピーして署名鍵のパスと認証情報を記入します。
+
+```sh
+XDG_CONFIG_HOME="$PWD/.build-tools/config" godot --headless --path . --xr-mode off --export-release 'Quest 3'
+tools/check.sh
+godot --path . --xr-mode off -- --capture
+```
+
+デスクトップ確認：右ドラッグで見回す、1/2/3で景色、Mでメニュー、Spaceで浮遊、P長押しで膜を押す。
+フォントのみ再生成：`python3 tools/make_assets.py --font-only`。録音済み環境音を上書きしません。
+新しい効果音のみ再生成：`python3 tools/make_effects.py`。
+全環境音を合成音へ置き換える場合だけ `python3 tools/make_assets.py --procedural-audio` を使用します。
+音を作り直した後は `godot --headless --editor --path . --xr-mode off --import` で取り込みます。
+署名鍵は `.build-tools/foamhaven.keystore`。更新インストールのため保管してください。公開用配布時は署名鍵と設定の管理を見直してください。
+
+## 確認結果
+
+- 3環境の描画、メニュー範囲、浮遊停止、フォーカス時の停止、泡の消滅をチェック。
+- 膜の持続押下、離した後のオーバーシュートと静止をチェック。
+- APK v2署名の検証に成功。
+- 接続されたQuest 3へのインストールに成功。OpenXRのFOCUSEDセッションとTouchコントローラープロファイルをログで確認。
+- v0.3.0（versionCode 4）で再ビルドし、実機へ更新インストール済み。海はCC0実録音、部屋はパブリックドメインのオルゴール子守唄、風とぽにょんはプロジェクト内生成。
+- ユーザーによる実機表示・音の確認あり。全操作・長時間性能・体感の快適性を網羅的に検証したものではありません。
+
+## 素材と参照
+
+景色、形状、膜シェーダーはこのプロジェクト内で手続き生成しています。音は一部をオープンライセンスの実録音・実演奏に差し替えています。
+日本語フォントはNoto Sans CJK JPのサブセット（SIL OFL）。OpenXRプラグインのライセンスは `addons/godotopenxrvendors` 配下。
+
+- 青い海の環境音：Ocean Waves on a Tropical Beach（CC0）`https://commons.wikimedia.org/wiki/File:Ocean_Waves_on_a_Tropical_Beach.ogg`
+- 風船の部屋の音楽：Lullaby wound up clock "Schlafe, mein Prinzchen, schlaf ein"（Public domain, Stephan）`https://commons.wikimedia.org/wiki/File:Lullaby_wound_up_clock.ogg`
+- 夕焼けの空の風は、ループ加工の実録音として十分なCC0音源が現状見つからないため、プロジェクト内で合成した風の音を維持しています。
+- 各音のループ化・音量調整は `tools/import_audio.py`（元音源は `.build-tools/sound-src`）。新しい効果音は `tools/make_effects.py`、フォントは `tools/make_assets.py`。
+
+- https://docs.godotengine.org/en/stable/tutorials/xr/deploying_to_android.html
+- https://github.com/GodotVR/godot_openxr_vendors/releases/tag/5.1.0-stable
+
+## 今回の検証と退避
+
+- `tools/check.sh`：3景色、浮遊停止、フォーカス入力解除、膜の弾性、泡の寿命、音声クロスフェードとミュート、メニュー2ページのヒット判定、部屋の中央余白を検証。
+- Linuxの実OpenGL描画で3景色、メニュー、ガイドを撮影。`dist/preview_2.png` が整理後の部屋、`dist/preview_menu_detail.png` がメニュー。
+- Linuxのキャプチャ終了時に、GLES3のテクスチャ解放警告が2件残ります。スモークテストはエラーなし。警告の原因特定は未完了で、実機の長時間安定性を保証するものではありません。
+- 変更前の主要ソース・シェーダーと、Questから退避したAPKは `.build-tools/before-refactor/`。署名鍵とユーザー設定は維持しています。
+- 新しい効果音はこのプロジェクト内で生成したもので、新規の外部素材は追加していません。実機での音量・触感・快適性の評価は装着して確認する必要があります。
