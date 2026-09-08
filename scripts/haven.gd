@@ -33,6 +33,9 @@ var press_depth := [0.0, 0.0]
 var press_velocity := [0.0, 0.0]
 var outer_press_depth := [0.0, 0.0]
 var outer_press_velocity := [0.0, 0.0]
+var goo := [0.0, 0.0]
+var goo_velocity := [0.0, 0.0]
+var haptic_clock := [0.0, 0.0]
 var press_target := [0.0, 0.0]
 var press_points := [Vector3(-0.5, 0, -0.8).normalized(), Vector3(0.5, 0, -0.8).normalized()]
 var pressing := [false, false]
@@ -298,7 +301,6 @@ func _clear_interaction():
 	_set_hover(null)
 	pointer_dot.visible = false
 	pointer_ray.visible = false
-
 func _toggle_mode():
 	balloon_mode = not balloon_mode
 	_update_ui()
@@ -450,6 +452,15 @@ func _process(delta: float):
 				press_target[i] = grip * 0.20
 			if press_target[i] > 0.025 and not pressing[i]:
 				_touch(bubble.to_global(press_points[i]), i, true)
+			# A steady hum while the membrane is held, deepening with pressure.
+			if press_target[i] > 0.025:
+				haptic_clock[i] -= delta
+				if haptic_clock[i] <= 0.0:
+					var strength: float = clampf(press_target[i] / 0.20, 0.2, 1.0)
+					controllers[i].trigger_haptic_pulse("haptic", 0.0, 0.10 + 0.25 * strength, 0.09, 0.0)
+					haptic_clock[i] = 0.10 + 0.05 * (1.0 - strength)
+		else:
+			haptic_clock[i] = 0.0
 		pressing[i] = press_target[i] > 0.025
 	if not xr_active and desktop_press and not menu_open and membrane_visible and not transitioning:
 		press_points[1] = (bubble.global_basis.inverse() * camera.project_ray_normal(get_viewport().get_mouse_position())).normalized()
@@ -619,10 +630,17 @@ func _step_membrane(delta: float):
 			outer_press_depth[i] += outer_press_velocity[i] * step
 			# Keep a gap even during fast presses; the two skins must not cross.
 			outer_press_depth[i] = maxf(outer_press_depth[i], press_depth[i] - 0.045)
+			# A slow, soft follower turns a steady hold into a gooey push: the
+			# membrane keeps yielding while touched, then wobbles back on release.
+			var goo_target := clampf(press_target[i] / 0.20, 0.0, 1.0)
+			goo_velocity[i] += ((goo_target - goo[i]) * 10.0 - goo_velocity[i] * 4.5) * step
+			goo[i] = clampf(goo[i] + goo_velocity[i] * step, 0.0, 1.4)
 		remaining -= step
 	for mat in [bubble_mat, outer_mat]:
 		mat.set_shader_parameter("press_left", press_points[0])
 		mat.set_shader_parameter("press_right", press_points[1])
+		mat.set_shader_parameter("goo_left", goo[0])
+		mat.set_shader_parameter("goo_right", goo[1])
 		var depths: Array = outer_press_depth if mat == outer_mat else press_depth
 		mat.set_shader_parameter("depth_left", depths[0])
 		mat.set_shader_parameter("depth_right", depths[1])
@@ -729,6 +747,7 @@ func _smoke_test():
 		_step_membrane(1.0 / 90.0)
 	assert(press_depth[0] > 0.18 and press_depth[0] < 0.23, "Membrane must respond to sustained pressure")
 	assert(outer_press_depth[0] > 0.14 and outer_press_depth[0] < press_depth[0], "Outer skin follows while the double membrane compresses")
+	assert(goo[0] > 0.9, "Sustained touch must build the gooey follower")
 	press_target[0] = 0.0
 	var overshoot := false
 	for i in 270:
@@ -737,6 +756,7 @@ func _smoke_test():
 		assert(press_depth[0] - outer_press_depth[0] <= 0.0451, "Double membrane must retain a gap")
 	assert(overshoot and absf(press_depth[0]) < 0.001, "Release must wobble and settle")
 	assert(absf(outer_press_depth[0]) < 0.001, "Outer skin must also settle after release")
+	assert(absf(goo[0]) < 0.001, "Gooey follower must also settle after release")
 	for i in 5:
 		_switch_world(i)
 		assert(world.get_child_count() > 0)
