@@ -59,6 +59,16 @@ void fragment() {
     float window_light = pow(max(0.0, dot(direction, normalize(vec3(-0.55, 0.55, -0.65)))), 44.0);
     float soft_light = pow(max(0.0, dot(direction, normalize(vec3(0.7, 0.25, -0.65)))), 80.0);
     ALBEDO += gel * (gel_band * vec3(0.24, 0.28, 0.30) + (window_light + soft_light) * vec3(0.65, 0.69, 0.72));
-    float thickness = gel * (mix(0.052, 0.10, latex) + gel_band * 0.20 + ribbon * 0.16 + contact * 0.9 + pow(1.0 - facing, 1.2) * 0.12);
+    // Thickness: a bright glass edge then a deeper meniscus just inside it
+    // make the film read as a wall instead of a razor-thin line, and the far
+    // side of the cocoon glows faintly through the near wall.
+    float rim_narrow = pow(1.0 - facing, 6.0);
+    float rim_meniscus = pow(1.0 - facing, 1.7) * (1.0 - rim_narrow);
+    ALBEDO += rim_narrow * vec3(0.85, 0.9, 0.95) * 0.7
+            + gel * rim_meniscus * vec3(0.30, 0.38, 0.48) * 0.9;
+    float far_wall = pow(max(0.0, dot(-direction, normalize(vec3(-0.55, 0.55, -0.65)))), 26.0)
+                   + pow(max(0.0, dot(-direction, normalize(vec3(0.7, 0.25, -0.65)))), 60.0);
+    ALBEDO += gel * far_wall * vec3(0.15, 0.17, 0.19) * 0.8;
+    float thickness = gel * (mix(0.052, 0.10, latex) + gel_band * 0.20 + ribbon * 0.16 + contact * 0.9 + pow(1.0 - facing, 1.2) * 0.12 + rim_meniscus * 0.34 + far_wall * 0.10);
     ALPHA = clamp((mix(0.018, 0.004, gel) + rim * 0.58 + ribbon * mix(0.14, 0.018, gel) + gleam * mix(0.26, 0.06, gel) + latex * 0.07 + gel * (window_light * 0.24 + soft_light * 0.16) + ripple * 0.16 + thickness) * opacity * mix(1.0, 0.70, shell_layer), 0.0, 0.70);
 }

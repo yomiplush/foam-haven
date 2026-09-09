@@ -51,6 +51,9 @@ var bubble_anchor := Vector3(0, 1.35, 0)
 var bubble_radius := 0.76
 var menu: Node3D
 var menu_open := true
+var outside_view := false
+var outside_anchor := Transform3D.IDENTITY
+var outside_mirror_before := false
 var menu_size := HavenMenu.SIZE
 var menu_pixels := HavenMenu.PIXELS
 var pointer_ray: MeshInstance3D
@@ -337,6 +340,46 @@ func _place_menu():
 	menu.global_position = camera.global_position + forward * 1.30 + Vector3(0, -0.08, 0)
 	menu.look_at(menu.global_position + forward, Vector3.UP)
 
+## The virtual head used to anchor the avatar and its cocoon. Normally it is
+## the tracked camera; in the exhibition view the avatar is parked ahead and
+## faces back toward the wearer so they can admire being wrapped from outside.
+func _view_head() -> Transform3D:
+	if not outside_view:
+		return camera.global_transform
+	return outside_anchor
+
+func _park_avatar():
+	var forward := -camera.global_basis.z
+	forward.y = 0
+	if forward.length_squared() < 0.01:
+		forward = Vector3.FORWARD
+	forward = forward.normalized()
+	var pose := Transform3D(Basis(), camera.global_position + forward * 1.7)
+	pose = pose.looking_at(camera.global_position, Vector3.UP)
+	outside_anchor = pose
+
+## Stick press toggles between the seated first-person view and an outside
+## view of the avatar wrapped in its cocoon, parked a couple of metres ahead.
+func _toggle_outside_view():
+	if transitioning:
+		return
+	outside_view = not outside_view
+	if outside_view:
+		_park_avatar()
+		garden.clear()
+		drift = false
+		stroll_offset = Vector3.ZERO
+		outside_mirror_before = is_instance_valid(mirror) and mirror.enabled
+		if outside_mirror_before:
+			mirror.set_enabled(false)
+	else:
+		if is_instance_valid(mirror) and outside_mirror_before and not mirror.enabled:
+			mirror.set_enabled(true)
+			mirror.place(camera.global_transform)
+		outside_mirror_before = false
+		_recenter()
+	_update_ui()
+
 func _update_ui():
 	if not is_instance_valid(menu):
 		return
@@ -383,7 +426,7 @@ func _toggle_skin():
 	_save_preferences()
 
 func _toggle_drift():
-	if transitioning or not focused:
+	if transitioning or not focused or outside_view:
 		return
 	if scene_index == MR_WORLD:
 		mr_motion = not mr_motion
@@ -491,7 +534,7 @@ func _controller_button(action: StringName, hand: int):
 	match action:
 		"ax_button": _toggle_drift()
 		"by_button", "menu_button": _toggle_menu()
-		"primary_click": _recenter()
+		"primary_click": _toggle_outside_view()
 		"trigger_click":
 			_update_pointer(hand)
 			if menu_open:
@@ -568,7 +611,7 @@ func _sync_hands():
 ## Hand mode has no menu: discrete gestures only make sense where there is no
 ## face to touch. A single pinch in open space makes a bubble.
 func _hand_pinch_actions(delta: float):
-	if not xr_active or not (side_handed[0] or side_handed[1]):
+	if not xr_active or outside_view or not (side_handed[0] or side_handed[1]):
 		pinch_ignore = 0.0
 		return
 	pinch_ignore = maxf(0.0, pinch_ignore - delta)
@@ -585,12 +628,12 @@ func _process(delta: float):
 		print("FOAM_PERF: world=", scene_index, " fps=", Engine.get_frames_per_second(), " draw_calls=", Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), " primitives=", Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME), " process_ms=", Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, " mirror=", mirror.enabled, " mr=", scene_index == MR_WORLD)
 	worlds.update(clock)
 	origin.position -= stroll_offset
-	if drift and not transitioning and scene_index != MR_WORLD:
+	if drift and not transitioning and scene_index != MR_WORLD and not outside_view:
 		drift_clock += delta
 		# Bounded 8 cm vertical, 5 cm lateral drift; no camera rotation or forced travel.
 		origin.position = Vector3(sin(drift_clock * 0.14) * 0.05, sin(drift_clock * 0.22) * 0.08, 0)
 	var stick := Vector2.ZERO
-	if not menu_open and not transitioning and scene_index != MR_WORLD:
+	if not menu_open and not transitioning and scene_index != MR_WORLD and not outside_view:
 		if xr_active and controllers[0].get_has_tracking_data():
 			stick = controllers[0].get_vector2("primary")
 		elif not xr_active:
@@ -599,6 +642,11 @@ func _process(delta: float):
 	else:
 		stroll_velocity = Vector3.ZERO
 	origin.position += stroll_offset
+	if outside_view:
+		# Anchor the cocoon and scenery around the parked avatar, ahead of the
+		# wearer, instead of around the tracked head.
+		stroll_offset = Vector3.ZERO
+		bubble_anchor = origin.to_local(outside_anchor.origin) - Vector3(0, 0.25, 0)
 	if xr_active and clock < 1.2:
 		_recenter(false)
 	bubble.position = origin.position - stroll_offset + bubble_anchor
@@ -620,7 +668,7 @@ func _process(delta: float):
 	for i in controllers.size():
 		controller_visuals[i].visible = xr_active and side_controller[i] and not avatar.is_loaded()
 		press_target[i] = 0.0
-		if xr_active and side_tracked[i] and bubble.visible and not transitioning:
+		if xr_active and side_tracked[i] and bubble.visible and not transitioning and not outside_view:
 			var local := bubble.to_local(side_pos[i])
 			var reach := local.length()
 			if reach > 0.72 and reach < 1.5:
@@ -692,7 +740,7 @@ func _touch(point: Vector3, hand: int, force: bool):
 	soundscape.play_touch(0.75 if balloon_mode else 1.2)
 
 func _spawn_bubble(point: Vector3, direction: Vector3):
-	if spawn_cooldown > 0 or spawned.size() >= BubbleMotion.MAX_BUBBLES or not focused or transitioning or menu_open:
+	if spawn_cooldown > 0 or spawned.size() >= BubbleMotion.MAX_BUBBLES or not focused or transitioning or menu_open or outside_view:
 		return
 	spawn_cooldown = 0.3
 	if scene_index == MR_WORLD:
@@ -799,6 +847,7 @@ func _unhandled_input(event: InputEvent):
 			KEY_H: _toggle_skin()
 			KEY_Q: _toggle_sound()
 			KEY_R: _recenter()
+			KEY_V: _toggle_outside_view()
 			KEY_T: _touch(camera.global_position + -camera.global_basis.z, 0, true)
 
 func _step_membrane(delta: float):
@@ -933,6 +982,14 @@ func _capture_scenes():
 		await get_tree().create_timer(0.4).timeout
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png("res://dist/preview_floating_seated.png")
+		# Exhibition view: the avatar parked ahead inside its cocoon, seen from
+		# the outside looking back at the wearer.
+		camera.rotation_degrees.x = -8
+		_toggle_outside_view()
+		await get_tree().create_timer(0.8).timeout
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png("res://dist/preview_outside.png")
+		_toggle_outside_view()
 		camera.rotation = Vector3.ZERO
 		_switch_world(MR_WORLD)
 		await get_tree().create_timer(0.8).timeout
@@ -1255,7 +1312,13 @@ func _update_avatar_pose(delta: float):
 	if not avatar.is_loaded():
 		return
 	var inputs := _avatar_hand_inputs()
-	avatar.update_pose(camera.global_transform, inputs.hands, inputs.tracking, delta, inputs.gestures)
+	if outside_view:
+		# The parked avatar is a display piece: keep its hands resting on its
+		# lap while the wearer's real hands stay out of the picture.
+		for i in 2:
+			inputs.tracking[i] = false
+			inputs.gestures[i] = Vector3(0.16, 0.2, 0.12)
+	avatar.update_pose(_view_head(), inputs.hands, inputs.tracking, delta, inputs.gestures)
 
 func _avatar_hand_inputs() -> Dictionary:
 	var hands: Array[Transform3D] = []
