@@ -539,7 +539,7 @@ func _sync_hands():
 			hand_joints[i] = joints
 			var aim := HandInput.aim_pose(joints)
 			side_pos[i] = HandInput.touch_point(joints)
-			side_palm_tr[i] = HandInput.avatar_frame(joints)
+			side_palm_tr[i] = HandInput.avatar_frame(joints, i == 0)
 			side_origin[i] = aim.origin
 			side_dir[i] = aim.dir
 			side_basis[i] = aim.basis

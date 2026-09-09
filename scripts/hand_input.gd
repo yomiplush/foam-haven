@@ -132,8 +132,9 @@ static func aim_pose(positions: Dictionary) -> Dictionary:
 ## forward axis follows the hand's length (wrist -> middle knuckle, so finger
 ## folding does not rock it) and the back-of-hand normal is derived from the
 ## knuckle line, so rotating the wrist rolls the avatar hand with it instead
-## of freezing it -- and without the unstable cross-product of a pointing ray.
-static func avatar_frame(positions: Dictionary) -> Transform3D:
+## of freezing it. The cross product is a pseudo-vector under mirroring, so
+## the left hand needs its normal flipped to read as the back of the hand.
+static func avatar_frame(positions: Dictionary, is_left: bool = false) -> Transform3D:
 	var palm: Vector3 = positions.get(J_PALM, Vector3.ZERO)
 	var wrist: Vector3 = positions.get(J_WRIST, palm)
 	var middle_mcp: Vector3 = positions.get(J_MIDDLE_MCP, palm)
@@ -147,6 +148,8 @@ static func avatar_frame(positions: Dictionary) -> Transform3D:
 	var across: Vector3 = positions.get(J_INDEX_MCP, palm) - positions.get(J_PINKY_MCP, palm)
 	across -= fwd * across.dot(fwd)
 	var dorsal := fwd.cross(across)
+	if is_left:
+		dorsal = -dorsal
 	if dorsal.length() < 0.03:
 		# Degenerate geometry: fall back to a level, roll-free frame.
 		var up: Vector3 = Vector3.UP - fwd * fwd.dot(Vector3.UP)

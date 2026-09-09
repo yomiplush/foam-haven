@@ -57,19 +57,29 @@ func run():
 	check(aim.basis.z.dot(-aim.dir) > 0.99, "aim basis points forward along dir")
 	check(HandInput.reach_dir(fist).length() > 0.5, "reach direction remains stable for a fist")
 	check(HandInput.touch_point(extended).distance_to(extended[HandInput.J_PALM]) < 0.2, "touch point stays near the palm")
-	var frame := HandInput.avatar_frame(extended)
+	var frame := HandInput.avatar_frame(extended, false)
 	var reach := HandInput.reach_dir(extended)
 	check(frame.basis.z.dot(-reach) > 0.95, "avatar hand points along the reach")
 	check(frame.origin.distance_to(extended[HandInput.J_PALM]) < 0.001, "avatar hand sits on the palm joint")
 	check(absf(frame.basis.determinant() - 1.0) < 0.001, "avatar frame stays a right-handed rotation")
+	# The left hand is the mirror of the right; both must read dorsal the same
+	# way (back of the hand up for a palm-down pose), never flipped.
+	var mirrored := extended.duplicate()
+	for key in extended:
+		var p: Vector3 = extended[key]
+		mirrored[key] = Vector3(-p.x, p.y, p.z)
+	var left_frame := HandInput.avatar_frame(mirrored, true)
+	check(left_frame.basis.y.dot(frame.basis.y) > 0.85, "left hand dorsal matches the right hand")
 	# Rotating the wrist must roll the avatar hand with it, not freeze it.
 	var twisted := rolled_hand(extended, deg_to_rad(70.0))
-	var twisted_frame := HandInput.avatar_frame(twisted)
+	var twisted_frame := HandInput.avatar_frame(twisted, false)
 	var roll := rad_to_deg(frame.basis.y.angle_to(twisted_frame.basis.y))
 	check(roll > 40.0, "wrist roll is followed by the avatar hand")
 	check(roll < 90.0, "dorsal stays on the back of the hand while rolling")
 	check(absf(twisted_frame.basis.determinant() - 1.0) < 0.001, "rolled frame stays right-handed")
+	var twisted_left := HandInput.avatar_frame(rolled_hand(mirrored, deg_to_rad(70.0)), true)
+	check(twisted_left.basis.y.dot(twisted_frame.basis.y) > 0.85, "rolled left hand dorsal matches the right")
 	await get_tree().process_frame
 	if not failed:
-		print("HAND_CHECK_OK: grasp, pinch, aim basis, reach, touch point, avatar roll")
+		print("HAND_CHECK_OK: grasp, pinch, aim basis, reach, touch point, avatar roll, left/right dorsal")
 	get_tree().quit(1 if failed else 0)
