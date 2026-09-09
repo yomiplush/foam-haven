@@ -75,6 +75,8 @@ var pinch_started := [-9.0, -9.0]
 var pinch_ignore := 0.0
 var hand_joints := [{}, {}]
 var next_hand_log := 0.0
+var menu_poke_cd := 0.0
+var poke_down := [false, false]
 var fade_mat: StandardMaterial3D
 var fade_surface: MeshInstance3D
 var transitioning := false
@@ -335,7 +337,12 @@ func _place_menu():
 	if forward.length_squared() < 0.01:
 		forward = Vector3.FORWARD
 	forward = forward.normalized()
-	menu.global_position = camera.global_position + forward * 1.30 + Vector3(0, -0.08, 0)
+	# Hand tracking has no ray-distant buttons: bring the panel within reach so
+	# a button is pressed by touching its face, just like the membrane.
+	var distance := 1.30
+	if xr_active and (side_handed[0] or side_handed[1]):
+		distance = 0.72
+	menu.global_position = camera.global_position + forward * distance + Vector3(0, -0.08, 0)
 	menu.look_at(menu.global_position + forward, Vector3.UP)
 
 func _update_ui():
@@ -552,9 +559,9 @@ func _sync_hands():
 		next_hand_log = clock + 15.0
 		print("FOAM_HAND: left=", side_handed[0], " right=", side_handed[1], " lp=", side_palm_tr[0].origin, " rp=", side_palm_tr[1].origin)
 
-## Discrete actions have no controller buttons in hand mode, so gestures stand
-## in: a single pinch selects or makes a bubble; pinching both hands at once
-## re-opens the menu. Controller clicks keep their normal buttons.
+## Hand mode has no menu buttons, so discrete actions are gestures only where
+## they cannot be felt instead: pinching both hands re-opens the menu; a single
+## pinch in open space makes a bubble. Anything on the menu is touched directly.
 func _hand_pinch_actions(delta: float):
 	if not xr_active or not (side_handed[0] or side_handed[1]):
 		pinch_ignore = 0.0
@@ -576,14 +583,42 @@ func _hand_pinch_actions(delta: float):
 					pinch_edge[j] = false
 				_toggle_menu()
 				return
-	if fresh.size() == 1 and pinch_ignore <= 0.0:
-		var hand: int = fresh[0]
-		pointer_controller = hand
-		_update_pointer(hand)
-		if menu_open:
-			_activate_hover()
-		else:
-			_spawn_bubble(side_origin[hand], side_dir[hand])
+	if fresh.size() == 1 and pinch_ignore <= 0.0 and not menu_open:
+		_spawn_bubble(side_origin[fresh[0]], side_dir[fresh[0]])
+
+## Poking the menu with a hand, like touching the membrane: the hand's touch
+## point is projected onto the panel and the button under it is highlighted;
+## pushing through the face of that button presses it. No pinch or ray needed.
+func _hand_menu_interaction(delta: float):
+	if not (xr_active and menu_open and focused and not transitioning):
+		return
+	menu_poke_cd = maxf(0.0, menu_poke_cd - delta)
+	var pressed := -1
+	for i in 2:
+		if not side_handed[i]:
+			poke_down[i] = false
+			continue
+		var local := menu.to_local(side_pos[i])
+		var in_zone := false
+		if local.z > 0.01 and local.z < 0.24:
+			var button := _menu_button_at(local)
+			if button != null:
+				in_zone = true
+				_set_hover(button)
+				pointer_controller = i
+		var was_down: bool = poke_down[i]
+		poke_down[i] = in_zone
+		if in_zone and not was_down and menu_poke_cd <= 0.0:
+			pressed = i
+	if pressed >= 0:
+		menu_poke_cd = 0.6
+		_activate_hover()
+
+func _menu_button_at(local: Vector3) -> Button:
+	var pixel := Vector2(local.x / menu_size.x + 0.5, 0.5 - local.y / menu_size.y) * menu_pixels
+	if pixel.x < 0 or pixel.y < 0 or pixel.x > menu_pixels.x or pixel.y > menu_pixels.y:
+		return null
+	return menu.hit_test(pixel)
 
 func _process(delta: float):
 	if not focused:
@@ -665,6 +700,7 @@ func _process(delta: float):
 	var pressure := maxf(press_target[0], press_target[1]) / 0.20
 	soundscape.update_rubbing(delta, maxf(pressure, garden.pressure), maxf(rub_motion, garden.rub_motion), balloon_mode or garden.pressure > pressure)
 	_update_pointer()
+	_hand_menu_interaction(delta)
 	_step_spawned_bubbles(delta)
 
 func _step_spawned_bubbles(delta: float):
