@@ -1,6 +1,6 @@
 extends RefCounted
 ## Keep the tracked camera untouched. Position authored scenery below the cocoon.
-const INNER_AXES := Vector3(0.76, 0.91, 0.76)
+const INNER_AXES := Vector3(0.88, 1.04, 0.88)
 const OUTER_AXES := INNER_AXES + Vector3.ONE * 0.075
 const FLOOR_CLEARANCE := 0.38
 const MAX_DEFORMATION := 0.27

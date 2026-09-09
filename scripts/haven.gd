@@ -52,7 +52,6 @@ var bubble_radius := 0.76
 var menu: Node3D
 var menu_open := true
 var outside_view := false
-var outside_anchor := Transform3D.IDENTITY
 var outside_mirror_before := false
 var menu_size := HavenMenu.SIZE
 var menu_pixels := HavenMenu.PIXELS
@@ -341,31 +340,28 @@ func _place_menu():
 	menu.look_at(menu.global_position + forward, Vector3.UP)
 
 ## The virtual head used to anchor the avatar and its cocoon. Normally it is
-## the tracked camera; in the exhibition view the avatar is parked ahead and
-## faces back toward the wearer so they can admire being wrapped from outside.
+## the tracked camera; in the exhibition view the avatar is parked a couple of
+## metres ahead but keeps the wearer's exact live head pose, so its neck and
+## gaze still move with them.
 func _view_head() -> Transform3D:
 	if not outside_view:
 		return camera.global_transform
-	return outside_anchor
-
-func _park_avatar():
 	var forward := -camera.global_basis.z
 	forward.y = 0
 	if forward.length_squared() < 0.01:
 		forward = Vector3.FORWARD
 	forward = forward.normalized()
-	var pose := Transform3D(Basis(), camera.global_position + forward * 1.7)
-	pose = pose.looking_at(camera.global_position, Vector3.UP)
-	outside_anchor = pose
+	var pose := camera.global_transform
+	pose.origin = camera.global_position + forward * 1.7
+	return pose
 
 ## Stick press toggles between the seated first-person view and an outside
-## view of the avatar wrapped in its cocoon, parked a couple of metres ahead.
+## view of the avatar wrapped in its cocoon, parked ahead of the wearer.
 func _toggle_outside_view():
 	if transitioning:
 		return
 	outside_view = not outside_view
 	if outside_view:
-		_park_avatar()
 		garden.clear()
 		drift = false
 		stroll_offset = Vector3.ZERO
@@ -646,7 +642,7 @@ func _process(delta: float):
 		# Anchor the cocoon and scenery around the parked avatar, ahead of the
 		# wearer, instead of around the tracked head.
 		stroll_offset = Vector3.ZERO
-		bubble_anchor = origin.to_local(outside_anchor.origin) - Vector3(0, 0.25, 0)
+		bubble_anchor = origin.to_local(_view_head().origin) - Vector3(0, 0.25, 0)
 	if xr_active and clock < 1.2:
 		_recenter(false)
 	bubble.position = origin.position - stroll_offset + bubble_anchor
