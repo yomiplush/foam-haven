@@ -10,6 +10,7 @@ const BubbleMotion = preload("res://scripts/bubble_motion.gd")
 const FloatingLayout = preload("res://scripts/floating_layout.gd")
 const FloatingGarden = preload("res://scripts/floating_garden.gd")
 const MixedReality = preload("res://scripts/mixed_reality.gd")
+const HandInput = preload("res://scripts/hand_input.gd")
 const MR_WORLD := 5
 var worlds = Worlds.new()
 var world: Node3D
@@ -55,6 +56,23 @@ var menu_pixels := HavenMenu.PIXELS
 var pointer_ray: MeshInstance3D
 var pointer_dot: MeshInstance3D
 var controller_visuals: Array[Node3D] = []
+# Per-side input resolved each frame from a Touch controller or, when the
+# controller is set down, from the Quest optical hand tracker.
+var side_tracked := [false, false]
+var side_controller := [false, false]
+var side_handed := [false, false]
+var side_pos := [Vector3.ZERO, Vector3.ZERO]
+var side_palm_tr := [Transform3D.IDENTITY, Transform3D.IDENTITY]
+var side_origin := [Vector3.ZERO, Vector3.ZERO]
+var side_dir := [Vector3.ZERO, Vector3.ZERO]
+var side_basis := [Basis.IDENTITY, Basis.IDENTITY]
+var side_grip := [0.0, 0.0]
+var side_pinch := [0.0, 0.0]
+var prev_pinch := [0.0, 0.0]
+var pinch_edge := [false, false]
+var pinch_started := [-9.0, -9.0]
+var pinch_ignore := 0.0
+var hand_joints := [{}, {}]
 var fade_mat: StandardMaterial3D
 var fade_surface: MeshInstance3D
 var transitioning := false
@@ -74,7 +92,7 @@ var avatar_picker: FileDialog
 var mirror: Node3D
 var calibration_pending := false
 var garden: Node3D
-var mr_membrane := false
+var mr_membrane := true
 var mr_motion := true
 var last_vr_world := 3
 var mr_preview := false
@@ -437,7 +455,7 @@ func _update_floating_layout():
 		world.position = Vector3(bubble_anchor.x, FloatingLayout.scenery_height(bubble_anchor.y), bubble_anchor.z)
 
 func _garden_touched(hand: int, strength: float):
-	if xr_active and controllers[hand].get_has_tracking_data():
+	if xr_active and side_controller[hand]:
 		controllers[hand].trigger_haptic_pulse("haptic", 0.0, 0.10 + strength * 0.22, 0.09, 0.0)
 
 func _focus_lost():
@@ -478,6 +496,91 @@ func _controller_button(action: StringName, hand: int):
 			else:
 				_spawn_bubble(controllers[hand].global_position, -controllers[hand].global_basis.z)
 
+func _hand_tracker(i: int) -> XRHandTracker:
+	if not xr_active:
+		return null
+	var tracker := XRServer.get_tracker("/user/hand_tracker/left" if i == 0 else "/user/hand_tracker/right")
+	if tracker is XRHandTracker:
+		return tracker
+	return null
+
+## Resolve what each hand is doing this frame. A tracked Touch controller
+## always wins; when it is set down the Quest hand tracker takes over with
+## pinch/grasp gestures read straight from the finger joints.
+func _sync_hands():
+	for i in 2:
+		side_controller[i] = xr_active and controllers[i].get_has_tracking_data()
+		pinch_edge[i] = false
+		side_pinch[i] = 0.0
+		if side_controller[i]:
+			var frame: Transform3D = controllers[i].global_transform
+			side_tracked[i] = true
+			side_handed[i] = false
+			side_pos[i] = frame.origin
+			side_palm_tr[i] = frame
+			side_origin[i] = frame.origin
+			side_dir[i] = -frame.basis.z
+			side_basis[i] = frame.basis.orthonormalized()
+			side_grip[i] = controllers[i].get_float("grip")
+			prev_pinch[i] = 0.0
+		else:
+			side_tracked[i] = false
+			side_handed[i] = false
+			var tracker := _hand_tracker(i)
+			if tracker == null:
+				continue
+			var joints := HandInput.world_joints(origin, tracker)
+			if joints.is_empty():
+				continue
+			side_tracked[i] = true
+			side_handed[i] = true
+			hand_joints[i] = joints
+			var aim := HandInput.aim_pose(joints)
+			side_pos[i] = HandInput.touch_point(joints)
+			var palm: Vector3 = joints.get(HandInput.J_PALM, aim.origin)
+			side_palm_tr[i] = Transform3D(aim.basis, palm)
+			side_origin[i] = aim.origin
+			side_dir[i] = aim.dir
+			side_basis[i] = aim.basis
+			side_grip[i] = HandInput.grasp(joints)
+			side_pinch[i] = HandInput.pinch(joints)
+			if side_pinch[i] > 0.6 and prev_pinch[i] <= 0.6:
+				pinch_edge[i] = true
+		prev_pinch[i] = side_pinch[i]
+
+## Discrete actions have no controller buttons in hand mode, so gestures stand
+## in: a single pinch selects or makes a bubble; pinching both hands at once
+## re-opens the menu. Controller clicks keep their normal buttons.
+func _hand_pinch_actions(delta: float):
+	if not xr_active or not (side_handed[0] or side_handed[1]):
+		pinch_ignore = 0.0
+		return
+	pinch_ignore = maxf(0.0, pinch_ignore - delta)
+	var fresh: Array[int] = []
+	for i in 2:
+		if pinch_edge[i]:
+			pinch_started[i] = clock
+			fresh.append(i)
+	# Two pinches that land close together open the menu again. The second hand
+	# joining an ongoing pinch counts too, so no single-pinch action fires.
+	if not menu_open and pinch_ignore <= 0.0 and fresh.size() > 0:
+		for hand in fresh:
+			var other := 1 - hand
+			if side_handed[other] and side_pinch[other] > 0.6 and clock - pinch_started[other] <= 0.35:
+				pinch_ignore = 0.45
+				for j in fresh:
+					pinch_edge[j] = false
+				_toggle_menu()
+				return
+	if fresh.size() == 1 and pinch_ignore <= 0.0:
+		var hand: int = fresh[0]
+		pointer_controller = hand
+		_update_pointer(hand)
+		if menu_open:
+			_activate_hover()
+		else:
+			_spawn_bubble(side_origin[hand], side_dir[hand])
+
 func _process(delta: float):
 	if not focused:
 		return
@@ -513,27 +616,28 @@ func _process(delta: float):
 	outer_mat.set_shader_parameter("touch_amount", ripple)
 	touch_cooldown = maxf(0, touch_cooldown - delta)
 	spawn_cooldown = maxf(0, spawn_cooldown - delta)
+	_sync_hands()
+	_hand_pinch_actions(delta)
 	_update_avatar_pose(delta)
 	_update_ribbons()
 	_step_garden(delta)
 	mirror.update_reflection(camera.global_transform, xr, origin.global_transform, focused and avatar.is_loaded() and not menu_open and not transitioning)
 	for i in controllers.size():
-		controller_visuals[i].visible = xr_active and controllers[i].get_has_tracking_data() and not avatar.is_loaded()
+		controller_visuals[i].visible = xr_active and side_controller[i] and not avatar.is_loaded()
 		press_target[i] = 0.0
-		if xr_active and controllers[i].get_has_tracking_data() and bubble.visible and not transitioning:
-			var local := bubble.to_local(controllers[i].global_position)
+		if xr_active and side_tracked[i] and bubble.visible and not transitioning:
+			var local := bubble.to_local(side_pos[i])
 			var reach := local.length()
-			var grip: float = controllers[i].get_float("grip")
 			if reach > 0.72 and reach < 1.5:
 				press_target[i] = clampf((reach - 0.72) * 0.8, 0.0, 0.22)
 				press_points[i] = local.normalized()
-			elif grip > 0.1:
-				press_points[i] = (bubble.global_basis.inverse() * -controllers[i].global_basis.z).normalized()
-				press_target[i] = grip * 0.20
+			elif side_grip[i] > 0.1:
+				press_points[i] = (bubble.global_basis.inverse() * side_dir[i]).normalized()
+				press_target[i] = side_grip[i] * 0.20
 			if press_target[i] > 0.025 and not pressing[i]:
 				_touch(bubble.to_global(press_points[i]), i, true)
 			# A steady hum while the membrane is held, deepening with pressure.
-			if press_target[i] > 0.025:
+			if press_target[i] > 0.025 and side_controller[i]:
 				haptic_clock[i] -= delta
 				if haptic_clock[i] <= 0.0:
 					var strength: float = clampf(press_target[i] / 0.20, 0.2, 1.0)
@@ -588,7 +692,7 @@ func _touch(point: Vector3, hand: int, force: bool):
 	outer_mat.set_shader_parameter("touch_point", local.normalized())
 	ripple = 1.0
 	touch_cooldown = 0.5
-	if xr_active and controllers[hand].get_has_tracking_data():
+	if xr_active and side_controller[hand]:
 		controllers[hand].trigger_haptic_pulse("haptic", 0.0, 0.18, 0.06, 0.0)
 	soundscape.play_touch(0.75 if balloon_mode else 1.2)
 
@@ -626,11 +730,10 @@ func _update_pointer(pressed_hand: int = -1):
 	if xr_active:
 		var candidates := [pressed_hand] if pressed_hand >= 0 else [pointer_controller, 1 - pointer_controller]
 		for hand in candidates:
-			var controller := controllers[hand]
-			if not controller.get_has_tracking_data():
+			if not side_tracked[hand]:
 				continue
-			from = controller.global_position
-			hit = _menu_ray_hit(from, -controller.global_basis.z)
+			from = side_origin[hand]
+			hit = _menu_ray_hit(from, side_dir[hand])
 			if not hit.is_empty():
 				break
 	else:
@@ -755,7 +858,7 @@ func _load_preferences():
 		balloon_mode = bool(config.get_value("haven", "balloon", false))
 		membrane_visible = bool(config.get_value("haven", "membrane", true))
 		sound_on = bool(config.get_value("haven", "sound", true))
-		mr_membrane = bool(config.get_value("haven", "mr_membrane", false))
+		mr_membrane = bool(config.get_value("haven", "mr_membrane", true))
 		mr_motion = bool(config.get_value("haven", "mr_motion", true))
 		last_vr_world = clampi(int(config.get_value("haven", "last_vr_world", 3)), 0, 4)
 		wrist_ribbons = bool(config.get_value("haven", "ribbons", true))
@@ -1120,6 +1223,17 @@ func _avatar_hand_inputs() -> Dictionary:
 	var gestures: Array[Vector3] = []
 	for i in 2:
 		# Stable semantic identity even when the hands cross: 0=left, 1=right.
+		if side_handed[i]:
+			# Optical hand tracking: feed the palm pose and finger folds through
+			# so the avatar's arms and fingers follow the real hand.
+			hands.append(side_palm_tr[i])
+			tracking.append(true)
+			var joints: Dictionary = hand_joints[i]
+			var index_curl := HandInput.finger_curl(joints, HandInput.FINGERS[0])
+			var others := HandInput.other_curl(joints)
+			var thumb := HandInput.thumb_curl(joints)
+			gestures.append(Vector3(maxf(index_curl, 0.05), maxf(others, 0.05), maxf(thumb, 0.10)))
+			continue
 		# Grip supplies the palm position; aim's +Y follows the controller's upper face.
 		var hand := avatar_grips[i].global_transform
 		hand.basis = controllers[i].global_basis.orthonormalized()
@@ -1136,9 +1250,9 @@ func _step_garden(delta: float):
 	var tracking: Array[bool] = []
 	var grips: Array[float] = []
 	for hand in 2:
-		positions.append(avatar_grips[hand].global_position)
-		tracking.append(xr_active and avatar_grips[hand].get_has_tracking_data())
-		grips.append(controllers[hand].get_float("grip"))
+		positions.append(side_palm_tr[hand].origin if side_handed[hand] else avatar_grips[hand].global_position)
+		tracking.append(side_tracked[hand])
+		grips.append(side_grip[hand])
 	garden.step(delta, camera.global_position, positions, tracking, grips, not menu_open and not transitioning and focused)
 
 func _toggle_mirror():

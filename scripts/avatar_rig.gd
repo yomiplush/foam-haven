@@ -285,8 +285,9 @@ func _distribute_forearm_twist(lower: int, hand: int, desired: Basis, dorsal_loc
 	skeleton.set_bone_global_pose(lower, elbow)
 
 func _pose_leg(side: String, sign_side: float, inv: Transform3D):
-	# Always the "girl sit": knees forward and together, feet folded back so
-	# the soles rest beside the hips. Sitting is fixed, whatever the eye height.
+	# Always the "girl sit": the inner thigh opens so the knees sit a little
+	# wider than the hips, feet folded back wide beside the hips. Sitting is
+	# fixed, whatever the eye height.
 	var upper: int = bones[side + "UpperLeg"]
 	var lower: int = bones[side + "LowerLeg"]
 	var foot: int = bones[side + "Foot"]
@@ -295,10 +296,10 @@ func _pose_leg(side: String, sign_side: float, inv: Transform3D):
 	var up := Basis(Vector3.UP, body_yaw).y
 	var hip_world := skeleton.to_global(skeleton.get_bone_global_pose(upper).origin)
 	var thigh := skeleton.to_global(skeleton.get_bone_global_pose(lower).origin).distance_to(hip_world)
-	# Scale from this avatar's actual leg length. Knees draw inward; ankles
-	# spread beside the hips, behind the knees, with an open W silhouette.
-	var knee_offset := (forward * 0.94 - left * sign_side * 0.20 - up * 0.18) * thigh
-	var foot_world := hip_world + (forward * 0.27 + left * sign_side * 0.42 - up * 0.25) * thigh
+	# The pole magnitude is kept modest so the knee bend stays on the forward
+	# azimuth; scale the lateral flare from the avatar's actual leg length.
+	var knee_offset := (forward * 0.95 + left * sign_side * 1.30 - up * 0.58) * thigh
+	var foot_world := hip_world + (forward * 0.27 + left * sign_side * 0.55 - up * 0.25) * thigh
 	# A pole is a direction from the hip, not an absolute skeleton-space point.
 	_solve_limb(upper, lower, foot, inv * foot_world, inv.basis * knee_offset)
 	var pose := skeleton.get_bone_global_pose(foot)

@@ -27,7 +27,9 @@ func _smoke_test():
 	camera.position = Vector3(0,0.8,0)
 	_switch_world(MR_WORLD)
 	verify(scene_index == MR_WORLD and world.get_child_count() == 0, "MR excludes virtual floors and walls")
-	verify(not bubble.visible and not outer_bubble.visible, "MR starts without enclosing membrane")
+	menu_open = false
+	_update_ui()
+	verify(bubble.visible and outer_bubble.visible, "MR wraps you in the enclosing membrane once the menu closes")
 	var initial_origin := origin.transform
 	_toggle_drift()
 	for frame in 180:
