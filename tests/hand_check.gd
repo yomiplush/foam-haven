@@ -46,7 +46,12 @@ func run():
 	check(aim.basis.z.dot(-aim.dir) > 0.99, "aim basis points forward along dir")
 	check(HandInput.reach_dir(fist).length() > 0.5, "reach direction remains stable for a fist")
 	check(HandInput.touch_point(extended).distance_to(extended[HandInput.J_PALM]) < 0.2, "touch point stays near the palm")
+	var frame := HandInput.avatar_frame(extended)
+	var reach := HandInput.reach_dir(extended)
+	check(frame.basis.z.dot(-reach) > 0.95, "avatar hand points along the reach")
+	check(frame.basis.y.dot(Vector3.UP) > 0.9, "avatar hand stays level (no roll spin)")
+	check(frame.origin.distance_to(extended[HandInput.J_PALM]) < 0.001, "avatar hand sits on the palm joint")
 	await get_tree().process_frame
 	if not failed:
-		print("HAND_CHECK_OK: grasp, pinch, aim basis, reach, touch point")
+		print("HAND_CHECK_OK: grasp, pinch, aim basis, reach, touch point, avatar frame")
 	get_tree().quit(1 if failed else 0)

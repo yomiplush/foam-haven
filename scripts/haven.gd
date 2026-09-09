@@ -56,6 +56,7 @@ var menu_pixels := HavenMenu.PIXELS
 var pointer_ray: MeshInstance3D
 var pointer_dot: MeshInstance3D
 var controller_visuals: Array[Node3D] = []
+var chest_ribbon: Node3D
 # Per-side input resolved each frame from a Touch controller or, when the
 # controller is set down, from the Quest optical hand tracker.
 var side_tracked := [false, false]
@@ -73,6 +74,7 @@ var pinch_edge := [false, false]
 var pinch_started := [-9.0, -9.0]
 var pinch_ignore := 0.0
 var hand_joints := [{}, {}]
+var next_hand_log := 0.0
 var fade_mat: StandardMaterial3D
 var fade_surface: MeshInstance3D
 var transitioning := false
@@ -537,8 +539,7 @@ func _sync_hands():
 			hand_joints[i] = joints
 			var aim := HandInput.aim_pose(joints)
 			side_pos[i] = HandInput.touch_point(joints)
-			var palm: Vector3 = joints.get(HandInput.J_PALM, aim.origin)
-			side_palm_tr[i] = Transform3D(aim.basis, palm)
+			side_palm_tr[i] = HandInput.avatar_frame(joints)
 			side_origin[i] = aim.origin
 			side_dir[i] = aim.dir
 			side_basis[i] = aim.basis
@@ -547,6 +548,9 @@ func _sync_hands():
 			if side_pinch[i] > 0.6 and prev_pinch[i] <= 0.6:
 				pinch_edge[i] = true
 		prev_pinch[i] = side_pinch[i]
+	if xr_active and (side_handed[0] or side_handed[1]) and clock >= next_hand_log:
+		next_hand_log = clock + 15.0
+		print("FOAM_HAND: left=", side_handed[0], " right=", side_handed[1], " lp=", side_palm_tr[0].origin, " rp=", side_palm_tr[1].origin)
 
 ## Discrete actions have no controller buttons in hand mode, so gestures stand
 ## in: a single pinch selects or makes a bubble; pinching both hands at once
@@ -1157,6 +1161,7 @@ func _make_avatar_system():
 		origin.add_child(grip)
 		avatar_grips.append(grip)
 	_make_wrist_ribbons()
+	_make_chest_bow()
 	avatar_picker = FileDialog.new()
 	avatar_picker.access = FileDialog.ACCESS_FILESYSTEM
 	avatar_picker.file_mode = FileDialog.FILE_MODE_OPEN_FILE
@@ -1195,6 +1200,35 @@ func _make_wrist_ribbons():
 			geometry.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		ribbons.append(ribbon)
 
+func _make_chest_bow():
+	var bow := Node3D.new()
+	bow.name = "ChestRibbonBow"
+	add_child(bow)
+	var satin := worlds.fabric(Color("f2aacb"))
+	var satin_edge := worlds.fabric(Color("e79fc2"))
+	var pearl := worlds.material(Color("fff1e8"), 0.05)
+	# Two tall loops with their inner edges meeting at the knot in the middle.
+	for side in [-1.0, 1.0]:
+		var loop := PackedVector3Array()
+		for i in 33:
+			var t := TAU * float(i) / 32.0
+			loop.append(Vector3(side * 0.06 + cos(t) * 0.092, 0.02 + sin(t) * 0.115, -0.012 - sin(t) * 0.010))
+		worlds.curve(bow, loop, 0.020, satin, 6)
+	# Short ribbon tails that splay down over the chest from the knot.
+	for side in [-1.0, 1.0]:
+		var tail := PackedVector3Array()
+		for i in 13:
+			var t := float(i) / 12.0
+			tail.append(Vector3(side * 0.028 * t, -0.02 - t * 0.16, -0.02 + sin(t * 2.4 + side) * 0.012))
+		worlds.curve(bow, tail, 0.015, satin, 5, 0.8)
+	worlds.rounded_box(bow, Vector3(0, -0.01, -0.012), Vector3(0.075, 0.05, 0.035), satin_edge)
+	worlds.sphere(bow, Vector3(0, -0.012, -0.02), Vector3(0.017, 0.017, 0.012), pearl, 16, 8)
+	worlds._batch_geometry(bow)
+	for geometry: GeometryInstance3D in bow.find_children("*", "GeometryInstance3D", true, false):
+		geometry.layers = 1 | (1 << 19)
+		geometry.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	chest_ribbon = bow
+
 func _update_ribbons():
 	for hand in 2:
 		var ribbon := ribbons[hand]
@@ -1210,6 +1244,21 @@ func _update_ribbons():
 		else:
 			ribbon.global_transform = controllers[hand].global_transform
 			ribbon.global_position = avatar_grips[hand].global_position + controllers[hand].global_basis.z * 0.065
+	if not is_instance_valid(chest_ribbon):
+		return
+	chest_ribbon.visible = wrist_ribbons and not menu_open and avatar.is_loaded()
+	if not chest_ribbon.visible:
+		return
+	var chest_world := Vector3.ZERO
+	var bone: int = avatar.bones.get("Chest", avatar.bones.get("UpperChest", avatar.bones.get("Spine", -1)))
+	if bone >= 0:
+		chest_world = avatar.skeleton.to_global(avatar.skeleton.get_bone_global_pose(bone).origin)
+	chest_world.y += 0.01
+	var forward := Basis(Vector3.UP, avatar.body_yaw).z
+	var back := -forward
+	var x := Vector3.UP.cross(back)
+	chest_ribbon.global_transform = Transform3D(Basis(x, Vector3.UP, back), chest_world + forward * 0.035)
+	chest_ribbon.scale = Vector3.ONE * avatar.size_multiplier
 
 func _update_avatar_pose(delta: float):
 	if not avatar.is_loaded():

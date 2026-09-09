@@ -126,3 +126,19 @@ static func aim_pose(positions: Dictionary) -> Dictionary:
 	var back := -dir
 	var up := right.cross(back)
 	return {"origin": origin, "dir": dir, "basis": Basis(right, up, back)}
+
+## Frame that drives the avatar's hand. The palm joint is the anchor; the
+## orientation stays roll-free (roughly level with the world) so the hand mesh
+## never spins, and -Z points along the reach so it behaves like a controller.
+static func avatar_frame(positions: Dictionary) -> Transform3D:
+	var palm: Vector3 = positions.get(J_PALM, Vector3.ZERO)
+	var dir := reach_dir(positions)
+	if dir.length_squared() < 0.001:
+		dir = Vector3.FORWARD
+	var back := -dir
+	var up: Vector3 = Vector3.UP - back * back.dot(Vector3.UP)
+	if up.length_squared() < 0.0001:
+		up = Vector3.RIGHT - back * back.dot(Vector3.RIGHT)
+	up = up.normalized()
+	var x := up.cross(back)
+	return Transform3D(Basis(x, up, back), palm)
