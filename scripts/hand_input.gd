@@ -17,6 +17,7 @@ const J_MIDDLE_MCP := XRHandTracker.HAND_JOINT_MIDDLE_FINGER_METACARPAL
 const J_MIDDLE_TIP := XRHandTracker.HAND_JOINT_MIDDLE_FINGER_TIP
 const J_RING_TIP := XRHandTracker.HAND_JOINT_RING_FINGER_TIP
 const J_PINKY_TIP := XRHandTracker.HAND_JOINT_PINKY_FINGER_TIP
+const J_PINKY_MCP := XRHandTracker.HAND_JOINT_PINKY_FINGER_METACARPAL
 
 const FINGERS := [
 	[XRHandTracker.HAND_JOINT_INDEX_FINGER_METACARPAL, XRHandTracker.HAND_JOINT_INDEX_FINGER_PHALANX_PROXIMAL, XRHandTracker.HAND_JOINT_INDEX_FINGER_PHALANX_INTERMEDIATE, XRHandTracker.HAND_JOINT_INDEX_FINGER_PHALANX_DISTAL, XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP],
@@ -127,18 +128,37 @@ static func aim_pose(positions: Dictionary) -> Dictionary:
 	var up := right.cross(back)
 	return {"origin": origin, "dir": dir, "basis": Basis(right, up, back)}
 
-## Frame that drives the avatar's hand. The palm joint is the anchor; the
-## orientation stays roll-free (roughly level with the world) so the hand mesh
-## never spins, and -Z points along the reach so it behaves like a controller.
+## Frame that drives the avatar's hand. The palm joint is the anchor. The
+## forward axis follows the hand's length (wrist -> middle knuckle, so finger
+## folding does not rock it) and the back-of-hand normal is derived from the
+## knuckle line, so rotating the wrist rolls the avatar hand with it instead
+## of freezing it -- and without the unstable cross-product of a pointing ray.
 static func avatar_frame(positions: Dictionary) -> Transform3D:
 	var palm: Vector3 = positions.get(J_PALM, Vector3.ZERO)
-	var dir := reach_dir(positions)
-	if dir.length_squared() < 0.001:
-		dir = Vector3.FORWARD
-	var back := -dir
-	var up: Vector3 = Vector3.UP - back * back.dot(Vector3.UP)
-	if up.length_squared() < 0.0001:
-		up = Vector3.RIGHT - back * back.dot(Vector3.RIGHT)
-	up = up.normalized()
-	var x := up.cross(back)
-	return Transform3D(Basis(x, up, back), palm)
+	var wrist: Vector3 = positions.get(J_WRIST, palm)
+	var middle_mcp: Vector3 = positions.get(J_MIDDLE_MCP, palm)
+	var fwd := middle_mcp - wrist
+	if fwd.length_squared() < 0.0004:
+		fwd = reach_dir(positions)
+	fwd = fwd.normalized()
+	# Knuckle line across the palm (index -> pinky). Project away from the
+	# forward axis so the dorsal normal stays perpendicular even when the
+	# tracker jitters.
+	var across: Vector3 = positions.get(J_INDEX_MCP, palm) - positions.get(J_PINKY_MCP, palm)
+	across -= fwd * across.dot(fwd)
+	var dorsal := fwd.cross(across)
+	if dorsal.length() < 0.03:
+		# Degenerate geometry: fall back to a level, roll-free frame.
+		var up: Vector3 = Vector3.UP - fwd * fwd.dot(Vector3.UP)
+		if up.length_squared() < 0.0001:
+			up = Vector3.RIGHT
+		up = up.normalized()
+		var x := up.cross(-fwd)
+		return Transform3D(Basis(x, up, -fwd), palm)
+	dorsal = dorsal.normalized()
+	# Basis with -Z along the hand's forward and +Y on the back of the hand,
+	# matching how a controller pose drives the avatar rig.
+	var z := -fwd
+	var y := dorsal
+	var x := y.cross(z)
+	return Transform3D(Basis(x, y, z), palm)

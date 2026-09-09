@@ -10,13 +10,24 @@ func check(ok: bool, message: String):
 
 func build_hand() -> Dictionary:
 	var out := {}
-	out[HandInput.J_WRIST] = Vector3.ZERO
-	out[HandInput.J_PALM] = Vector3(0, 0.0, 0.06)
-	for finger in HandInput.FINGERS:
-		for i in finger.size():
-			out[finger[i]] = Vector3(0.0, 0.0, 0.06 + float(i) * 0.04)
-	for i in HandInput.THUMB.size():
-		out[HandInput.THUMB[i]] = Vector3(0.015, -0.02 + float(i) * 0.005, 0.02 + float(i) * 0.04)
+	out[HandInput.J_WRIST] = Vector3(0, 0, -0.03)
+	out[HandInput.J_PALM] = Vector3(0, 0, 0.02)
+	for fi in HandInput.FINGERS.size():
+		var x := -0.024 + 0.016 * float(fi)
+		for j in HandInput.FINGERS[fi].size():
+			out[HandInput.FINGERS[fi][j]] = Vector3(x, 0.0, 0.05 + float(j) * 0.04)
+	for j in HandInput.THUMB.size():
+		var x := 0.03
+		out[HandInput.THUMB[j]] = Vector3(x * (1.0 - 0.2 * j), 0.0, 0.02 + float(j) * 0.03)
+	return out
+
+func rolled_hand(base: Dictionary, angle: float) -> Dictionary:
+	var out := base.duplicate()
+	var palm: Vector3 = base[HandInput.J_PALM]
+	var reach: Vector3 = (base[HandInput.J_MIDDLE_MCP] - base[HandInput.J_WRIST]).normalized()
+	var spin := Quaternion(reach, angle)
+	for key in out:
+		out[key] = palm + spin * (out[key] - palm)
 	return out
 
 func fist_hand() -> Dictionary:
@@ -49,9 +60,16 @@ func run():
 	var frame := HandInput.avatar_frame(extended)
 	var reach := HandInput.reach_dir(extended)
 	check(frame.basis.z.dot(-reach) > 0.95, "avatar hand points along the reach")
-	check(frame.basis.y.dot(Vector3.UP) > 0.9, "avatar hand stays level (no roll spin)")
 	check(frame.origin.distance_to(extended[HandInput.J_PALM]) < 0.001, "avatar hand sits on the palm joint")
+	check(absf(frame.basis.determinant() - 1.0) < 0.001, "avatar frame stays a right-handed rotation")
+	# Rotating the wrist must roll the avatar hand with it, not freeze it.
+	var twisted := rolled_hand(extended, deg_to_rad(70.0))
+	var twisted_frame := HandInput.avatar_frame(twisted)
+	var roll := rad_to_deg(frame.basis.y.angle_to(twisted_frame.basis.y))
+	check(roll > 40.0, "wrist roll is followed by the avatar hand")
+	check(roll < 90.0, "dorsal stays on the back of the hand while rolling")
+	check(absf(twisted_frame.basis.determinant() - 1.0) < 0.001, "rolled frame stays right-handed")
 	await get_tree().process_frame
 	if not failed:
-		print("HAND_CHECK_OK: grasp, pinch, aim basis, reach, touch point, avatar frame")
+		print("HAND_CHECK_OK: grasp, pinch, aim basis, reach, touch point, avatar roll")
 	get_tree().quit(1 if failed else 0)
