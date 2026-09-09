@@ -27,7 +27,7 @@ func _ready():
 		camera.keep_aspect = Camera3D.KEEP_HEIGHT
 		var environment := Environment.new()
 		environment.background_mode = Environment.BG_COLOR
-		environment.background_color = Color("233b46")
+		environment.background_color = Color("47334f")
 		environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 		environment.ambient_light_color = Color("f2e7df")
 		environment.ambient_light_energy = 0.65
@@ -43,7 +43,7 @@ func _ready():
 	surface.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(surface)
 	var trim := StandardMaterial3D.new()
-	trim.albedo_color = Color("c8b39b")
+	trim.albedo_color = Color("efcbd9")
 	trim.roughness = 0.5
 	for side in [-1, 1]:
 		_frame_piece(Vector3(side*(SIZE.x+0.035)*0.5,0,0.02), Vector3(0.035,SIZE.y+0.07,0.055), trim)
@@ -82,7 +82,7 @@ func place(head: Transform3D):
 	forward = forward.normalized()
 	global_basis = Basis(forward.cross(Vector3.UP), Vector3.UP, -forward)
 	global_position = head.origin + forward * 1.8
-	global_position.y = 1.02
+	global_position.y = head.origin.y - 0.30
 
 func set_enabled(value: bool):
 	enabled = value

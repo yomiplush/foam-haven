@@ -38,6 +38,12 @@ def char_text():
 
 
 def make_fonts():
+    data = json.loads((ASSETS / "i18n.json").read_text(encoding="utf-8"))
+    rows = ["# Generated from assets/i18n.json by tools/make_fonts.py.", "const KEYS := {"]
+    for key, value in sorted(data.items()):
+        rows.append("\t" + json.dumps(key) + ": " + json.dumps([value[lang] for lang in LANGS], ensure_ascii=False) + ",")
+    rows.append("}")
+    (ROOT / "scripts/translations.gd").write_text("\n".join(rows) + "\n", encoding="utf-8")
     texts = char_text()
     out_dir = ASSETS / "fonts"
     out_dir.mkdir(exist_ok=True)

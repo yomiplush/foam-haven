@@ -1,6 +1,7 @@
 extends RefCounted
 ## Procedural, self-contained environments. No downloaded artwork.
 const CraftedMeshes = preload("res://scripts/crafted_meshes.gd")
+const StaticGeometry = preload("res://scripts/static_geometry.gd")
 var crafted := CraftedMeshes.new()
 var opaque_vinyl: Shader
 var rng := RandomNumberGenerator.new()
@@ -39,6 +40,9 @@ func mesh_node(parent: Node3D, mesh: Mesh, pos: Vector3, size: Vector3, mat: Mat
 	return n
 
 func sphere(parent: Node3D, pos: Vector3, size: Vector3, mat: Material, segments: int = 24, rings: int = 12) -> MeshInstance3D:
+	if parent.get_meta("small_plush", false):
+		segments = mini(segments, 16)
+		rings = mini(rings, 8)
 	# Geometry is immutable and shared; transforms and materials belong to instances.
 	var key := Vector2i(segments, rings)
 	if not sphere_meshes.has(key):
@@ -90,12 +94,24 @@ func soap(opacity: float) -> ShaderMaterial:
 	materials.append(m)
 	return m
 
-func build(index: int) -> Node3D:
+func build(index: int, use_cache: bool = true) -> Node3D:
 	rng.seed = 42721 + index * 761
 	animated.clear()
 	materials.clear()
+	var cached_path := "res://assets/worlds/world_%d.scn" % index
+	if use_cache and ResourceLoader.exists(cached_path):
+		var packed := load(cached_path) as PackedScene
+		root = packed.instantiate()
+		for entry in root.get_meta("floaters", []):
+			var motion: Dictionary = entry.duplicate()
+			motion.node = root.get_node(entry.path)
+			animated.append(motion)
+		for mat in root.get_meta("animated_materials", []):
+			materials.append(mat)
+		print("FOAM_WORLD_READY: ", root.name, " baked=true")
+		return root
 	root = Node3D.new()
-	root.name = ["Ocean", "Sky", "BalloonRoom", "PlushRoom", "CandyDream"][index]
+	root.name = ["Ocean", "Sky", "BalloonRoom", "PlushRoom", "CandyDream", "MixedReality"][index]
 	match index:
 		0: ocean()
 		1: sky()
@@ -134,11 +150,8 @@ func _batch_geometry(parent: Node3D):
 			batch.multimesh = multi
 			instance = batch
 		else:
-			var surface := SurfaceTool.new()
-			for entry: Dictionary in group:
-				surface.append_from(entry.node.mesh, 0, entry.transform)
 			var batch := MeshInstance3D.new()
-			batch.mesh = surface.commit()
+			batch.mesh = StaticGeometry.merge(group)
 			instance = batch
 		instance.material_override = first.material_override
 		instance.cast_shadow = first.cast_shadow
@@ -168,8 +181,9 @@ func _collect_geometry(parent: Node3D, relative: Transform3D, groups: Dictionary
 			continue
 		# Outdoor batches are spatially bounded so frustum culling still works.
 		var cell := Vector2i.ZERO
-		if parent == root and root.name in ["Ocean", "Sky"]:
-			cell = Vector2i(floori(transform.origin.x / 18.0), floori(transform.origin.z / 18.0))
+		if parent == root:
+			var cell_size := 18.0 if root.name in ["Ocean", "Sky"] else 4.0
+			cell = Vector2i(floori(transform.origin.x / cell_size), floori(transform.origin.z / cell_size))
 		var key := "%d:%d:%d:%d" % [mat.get_instance_id(), cell.x, cell.y, child.cast_shadow]
 		if not groups.has(key):
 			groups[key] = []
@@ -469,6 +483,7 @@ func inflatable_dolphin(pos: Vector3, size: float) -> Node3D:
 	root.add_child(toy)
 	toy.position = pos
 	toy.scale = Vector3.ONE * size
+	toy.set_meta("small_plush", size < 0.65)
 	var skin := vinyl(Color("8bd7e9"))
 	var belly := vinyl(Color("e9f7ee"))
 	mesh_node(toy, load("res://assets/models/dolphin_body.obj"), Vector3.ZERO, Vector3.ONE, skin)

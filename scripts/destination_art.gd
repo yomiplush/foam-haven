@@ -16,8 +16,8 @@ func oval(center: Vector2, radius: Vector2, color: Color):
 func _draw():
 	var w := size.x
 	var h := size.y
-	var tops := [Color("123b50"), Color("656b91"), Color("b6a0b5"), Color("a8889f"), Color("c3a4dd")]
-	var bottoms := [Color("287d86"), Color("e7baa7"), Color("e7c9b5"), Color("f3d8bd"), Color("ffdbe6")]
+	var tops := [Color("123b50"), Color("656b91"), Color("b6a0b5"), Color("a8889f"), Color("c3a4dd"), Color("887b9d")]
+	var bottoms := [Color("287d86"), Color("e7baa7"), Color("e7c9b5"), Color("f3d8bd"), Color("ffdbe6"), Color("d7c3d8")]
 	for y in int(h):
 		draw_line(Vector2(0, y), Vector2(w, y), tops[destination].lerp(bottoms[destination], y / h))
 	match destination:
@@ -73,6 +73,15 @@ func _draw():
 				draw_style_box(_arch(), rect)
 				draw_line(rect.position, rect.position + Vector2(rect.size.x, 0), Color("efaacb"), 6)
 			oval(Vector2(w * 0.5, h * 0.75 - 65), Vector2(10, 12), Color("e67fa6"))
+		5:
+			draw_rect(Rect2(12, 12, w-24, h-24), Color("e8dbe9"), false, 1.5)
+			draw_line(Vector2(12,h-12), Vector2(w*0.35,h*0.65), Color("e8dbe9"), 1.5, true)
+			draw_line(Vector2(w-12,h-12), Vector2(w*0.70,h*0.65), Color("e8dbe9"), 1.5, true)
+			for i in 3:
+				var p := Vector2(w * (0.25 + i*0.27), h * (0.35 + sin(i*2.0)*0.15))
+				draw_line(p, p+Vector2(-3,48), Color("fff0e4"), 1.3, true)
+				oval(p, Vector2(16,20), [Color("f8abc8"),Color("e0b7f3"),Color("fff1df")][i])
+				oval(p+Vector2(-5,-7), Vector2(3,6), Color(1,1,1,0.7))
 
 func _arch() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()

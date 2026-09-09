@@ -28,6 +28,7 @@ environment/defaults/default_clear_color=Color(0.025, 0.09, 0.15, 1)
 [xr]
 openxr/enabled=true
 openxr/extensions/hand_tracking=false
+openxr/extensions/meta/passthrough=true
 openxr/default_action_map="res://openxr_action_map.tres"
 openxr/reference_space=1
 openxr/foveation_level=3

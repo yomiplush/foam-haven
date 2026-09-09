@@ -7,7 +7,9 @@ uniform int shadow_count = 0;
 uniform float daylight = 1.0;
 
 void vertex() {
-    world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+    // The floor is centered in its authored room. Keep the pattern and contact
+    // pools attached to that room when recentering translates the whole scene.
+    world_position = (MODEL_MATRIX * vec4(VERTEX, 0.0)).xyz;
 }
 
 void fragment() {

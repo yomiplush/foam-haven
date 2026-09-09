@@ -35,6 +35,37 @@ func run():
 		check(actual.origin.distance_to(hands[i].origin) < 0.025, "palm follows its own controller")
 		check(actual.basis.y.dot(hands[i].basis.y) > 0.999, "back of hand follows controller top")
 		check(actual.basis.z.dot(hands[i].basis.z) > 0.999, "fingers follow controller forward")
+	var leg_origins: Array[Vector3] = []
+	for side in ["Left", "Right"]:
+		var hip := rig.skeleton.to_global(rig.skeleton.get_bone_global_pose(rig.bones[side+"UpperLeg"]).origin)
+		var knee := rig.skeleton.to_global(rig.skeleton.get_bone_global_pose(rig.bones[side+"LowerLeg"]).origin)
+		var foot := rig.skeleton.to_global(rig.skeleton.get_bone_global_pose(rig.bones[side+"Foot"]).origin)
+		print("SEATED_LEG: ",side," knee_from_hip=",knee-hip," ankle_from_hip=",foot-hip)
+		check(knee.z < foot.z - 0.10, "knees stay in front of tucked feet")
+		check(knee.distance_to(hip) > 0.15, "thighs retain their length")
+		leg_origins.append(knee-head.origin)
+	# The pole must not depend on room-space position.
+	var translated := head
+	translated.origin += Vector3(3.0,-0.7,2.0)
+	var shifted_hands: Array[Transform3D] = []
+	for hand in hands:
+		var shifted := hand
+		shifted.origin += Vector3(3.0,-0.7,2.0)
+		shifted_hands.append(shifted)
+	rig.update_pose(translated, shifted_hands, tracked, 1.0/90.0)
+	for i in 2:
+		var knee := rig.skeleton.to_global(rig.skeleton.get_bone_global_pose(rig.bones["LeftLowerLeg" if i == 0 else "RightLowerLeg"]).origin)
+		check((knee-translated.origin).distance_to(leg_origins[i]) < 0.002, "girl-sit pose is translation invariant")
+	var gestures: Array[Vector3] = [Vector3.ONE, Vector3.ZERO]
+	for frame in 90:
+		rig.update_pose(head,hands,tracked,1.0/90.0,gestures)
+	check(not rig.finger_chains.is_empty(), "sample contains usable finger joints")
+	check(rig.finger_curls[0].x > 0.95 and rig.finger_curls[1].x < 0.01, "left grip does not curl right fingers")
+	for joint in rig.finger_chains:
+		if joint.hand == 0:
+			var rest_rotation := rig.skeleton.get_bone_rest(joint.bone).basis.get_rotation_quaternion()
+			check(rest_rotation.angle_to(rig.skeleton.get_bone_pose_rotation(joint.bone)) > 0.10, "grip rotates finger bones")
+	check(rig.expressions.bindings.has("blink"), "standard blink expression resolves")
 	var first_person_count := 0
 	var hidden_count := 0
 	for mesh in rig.model.find_children("*", "MeshInstance3D", true, false):
@@ -52,6 +83,7 @@ func run():
 		rig.update_pose(seated_head, hands, tracked, 1.0 / 90.0)
 		var eye := rig.skeleton.to_global(rig.skeleton.get_bone_global_pose(rig.bones.Head) * rig.eye_from_head)
 		check(eye.distance_to(seated_head.origin) < 0.001, "eyes follow seated and rotating head")
+		check(rig.skeleton.get_bone_pose_position(rig.bones.Head).distance_to(rig.skeleton.get_bone_rest(rig.bones.Head).origin) < 0.001, "head stays attached to neck")
 		for bone in rig.skeleton.get_bone_count():
 			check(rig.skeleton.get_bone_global_pose(bone).is_finite(), "pose must stay finite")
 	# Torso follows a long gaze and returns when the head does (VRChat-like lag).
@@ -75,6 +107,15 @@ func run():
 	var returned := absf(wrapf(rig.body_yaw - center_yaw, -PI, PI))
 	print("DEBUG torso returned=", returned)
 	check(returned < turned * 0.5, "torso settles back when the head returns")
+	var lost: Array[bool] = [false,true]
+	var prior_hand := rig.hand_world_frame(0)
+	rig.update_pose(gaze,hands,lost,1.0/90.0)
+	check(rig.hand_world_frame(0).origin.distance_to(prior_hand.origin) < 0.06, "tracking loss returns gently to lap")
+	for frame in 120:
+		rig.update_pose(gaze,hands,lost,1.0/90.0)
+	prior_hand = rig.hand_world_frame(0)
+	rig.update_pose(gaze,hands,tracked,1.0/90.0)
+	check(rig.hand_world_frame(0).origin.distance_to(prior_hand.origin) < 0.12, "tracking return blends without a snap")
 	var old_model := rig.model
 	check(not rig.load_avatar("res://project.godot"), "non-VRM must fail")
 	check(rig.model == old_model, "failed load must preserve old model")
@@ -92,5 +133,5 @@ func run():
 	await get_tree().process_frame
 	await get_tree().process_frame
 	if not failed:
-		print("AVATAR_CHECK_OK: VRM import, first-person layers, grip IK, seated eyes, invalid-file rollback")
+		print("AVATAR_CHECK_OK: VRM import, semantic palms, girl sit, fingers, neck attachment, tracking recovery, expressions, rollback")
 	get_tree().quit(1 if failed else 0)

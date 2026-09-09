@@ -2,6 +2,7 @@ extends Node3D
 ## The avatar follows tracking; this node never writes to the XR camera or origin.
 const Loader = preload("res://scripts/vrm_loader.gd")
 const Anatomy = preload("res://scripts/avatar_anatomy.gd")
+const Expressions = preload("res://scripts/avatar_expressions.gd")
 var model: Node3D
 var skeleton: Skeleton3D
 var bones: Dictionary = {}
@@ -19,6 +20,13 @@ var head_local_frame := Basis.IDENTITY
 var hand_anatomy: Array[Dictionary] = []
 var fitted_eye_height := 1.55
 var last_calibration_note := ""
+var finger_chains: Array[Dictionary] = []
+var finger_curls := [Vector3.ZERO, Vector3.ZERO]
+var last_targets: Array[Transform3D] = []
+var tracking_weights := [1.0, 1.0]
+var pose_clock := 0.0
+var expressions := Expressions.new()
+var gentle_expression := true
 
 func _ready():
 	display_name = I18n.t("plush_hands")
@@ -40,7 +48,12 @@ func load_avatar(path: String) -> bool:
 		return false
 	var mapping: BoneMap = candidate.vrm_meta.humanoid_bone_mapping
 	var mapped: Dictionary = {}
-	for human in ["Hips", "Head", "LeftEye", "RightEye", "LeftUpperArm", "LeftLowerArm", "LeftHand", "RightUpperArm", "RightLowerArm", "RightHand", "LeftUpperLeg", "LeftLowerLeg", "LeftFoot", "RightUpperLeg", "RightLowerLeg", "RightFoot", "LeftMiddleProximal", "LeftIndexProximal", "LeftLittleProximal", "RightMiddleProximal", "RightIndexProximal", "RightLittleProximal"]:
+	var human_names: Array[String] = ["Hips", "Spine", "Chest", "UpperChest", "Neck", "Head", "LeftEye", "RightEye", "LeftShoulder", "RightShoulder", "LeftUpperArm", "LeftLowerArm", "LeftHand", "RightUpperArm", "RightLowerArm", "RightHand", "LeftUpperLeg", "LeftLowerLeg", "LeftFoot", "LeftToes", "RightUpperLeg", "RightLowerLeg", "RightFoot", "RightToes"]
+	for side in ["Left", "Right"]:
+		for digit in ["Thumb", "Index", "Middle", "Ring", "Little"]:
+			for joint in (["Metacarpal", "Proximal", "Distal"] if digit == "Thumb" else ["Proximal", "Intermediate", "Distal"]):
+				human_names.append(side + digit + joint)
+	for human in human_names:
 		var bone_name: String = mapping.get_skeleton_bone_name(human) if mapping != null else human
 		var index := candidate_skeleton.find_bone(bone_name)
 		if index < 0:
@@ -76,6 +89,11 @@ func load_avatar(path: String) -> bool:
 	current_path = path
 	display_name = model.vrm_meta.title if not model.vrm_meta.title.is_empty() else path.get_file().get_basename()
 	add_child(model)
+	_cache_fingers()
+	expressions.configure(model)
+	last_targets.clear()
+	tracking_weights.fill(1.0)
+	finger_curls.fill(Vector3.ZERO)
 	calibrated = false
 	print("FOAM_VRM_LOADED: ", display_name, " version=", result.version, " bones=", skeleton.get_bone_count())
 	return true
@@ -91,6 +109,9 @@ func unload_avatar():
 	display_name = I18n.t("plush_hands")
 	calibrated = false
 	hand_anatomy.clear()
+	finger_chains.clear()
+	last_targets.clear()
+	expressions.clear()
 
 func calibrate(head: Transform3D):
 	if not is_loaded():
@@ -134,9 +155,11 @@ func hand_world_frame(hand: int) -> Transform3D:
 	var pose := skeleton.global_transform * skeleton.get_bone_global_pose(bones["LeftHand" if hand == 0 else "RightHand"])
 	return Transform3D(pose.basis.orthonormalized() * hand_anatomy[hand].local_frame, pose * hand_anatomy[hand].palm_anchor)
 
-func update_pose(head: Transform3D, hands: Array[Transform3D], tracked: Array[bool], delta: float):
-	if not is_loaded():
+func update_pose(head: Transform3D, hands: Array[Transform3D], tracked: Array[bool], delta: float, gestures: Array[Vector3] = []):
+	if not is_loaded() or hands.size() != 2 or tracked.size() != 2 or not head.is_finite():
 		return
+	delta = clampf(delta, 0.0, 0.05)
+	pose_clock += delta
 	if not calibrated:
 		calibrate(head)
 	var forward := -head.basis.z
@@ -155,20 +178,35 @@ func update_pose(head: Transform3D, hands: Array[Transform3D], tracked: Array[bo
 	basis = (Basis(Vector3.UP, body_yaw) * rest_body_basis.inverse()).scaled(Vector3.ONE * body_scale)
 	global_position = head.origin - global_basis * rest_eye
 	skeleton.reset_bone_poses()
-	var inv := skeleton.global_transform.affine_inverse()
+	_pose_spine(head)
 	var head_pose := skeleton.get_bone_global_pose(bones.Head)
 	head_pose.basis = (skeleton.global_basis.orthonormalized().inverse() * head.basis * Basis(Vector3.UP, PI) * head_local_frame.inverse()).orthonormalized()
-	head_pose.origin = inv * head.origin - head_pose.basis * eye_from_head
 	skeleton.set_bone_global_pose(bones.Head, head_pose)
+	# Move the body to put its eyes at the HMD. Keep the neck attached to the
+	# chest rather than translating the head bone away from its parent.
+	global_position += head.origin - skeleton.to_global(head_pose * eye_from_head)
+	var inv := skeleton.global_transform.affine_inverse()
 	for i in 2:
 		var side := "Left" if i == 0 else "Right"
 		var sign_side := 1.0 if i == 0 else -1.0
 		var target := Transform3D.IDENTITY
-		if tracked[i]:
+		if tracked[i] and hands[i].is_finite():
 			target = hands[i]
+			if last_targets.size() == 2 and tracking_weights[i] < 0.999:
+				tracking_weights[i] = minf(1.0, tracking_weights[i] + delta * 7.0)
+				target = last_targets[i].interpolate_with(target, 1.0-exp(-delta*28.0))
 		else:
-			target.origin = global_transform * (rest_eye + Vector3(sign_side * 0.22, -0.43, 0.26))
-			target.basis = global_basis.orthonormalized() * Basis(Vector3.UP, PI)
+			# Rest softly on the lap when a controller is put down.
+			var body_frame := Basis(Vector3.UP, body_yaw)
+			target.origin = head.origin + body_frame * Vector3(sign_side * 0.16, -0.48, 0.28) * size_multiplier
+			target.basis = body_frame * Basis(Vector3.UP, PI) * Basis(Vector3.FORWARD, sign_side * 0.16)
+			tracking_weights[i] = 0.0
+			if last_targets.size() == 2:
+				target = last_targets[i].interpolate_with(target, 1.0-exp(-delta*8.0))
+		if last_targets.size() <= i:
+			last_targets.append(target)
+		else:
+			last_targets[i] = target
 		var hand_id: int = bones[side + "Hand"]
 		var hand_basis: Basis = (skeleton.global_basis.orthonormalized().inverse() * target.basis.orthonormalized() * hand_anatomy[i].local_frame.inverse()).orthonormalized()
 		# The controller lies in the palm, not at the wrist joint.
@@ -179,10 +217,58 @@ func update_pose(head: Transform3D, hands: Array[Transform3D], tracked: Array[bo
 		var hand_pose := skeleton.get_bone_global_pose(hand_id)
 		hand_pose.basis = hand_basis
 		skeleton.set_bone_global_pose(hand_id, hand_pose)
+		var curl := gestures[i] if gestures.size() == 2 and tracked[i] else Vector3(0.16, 0.20, 0.18)
+		finger_curls[i] = finger_curls[i].lerp(curl.clamp(Vector3.ZERO, Vector3.ONE), 1.0-exp(-delta*20.0))
 		# Always keep the knees together, feet tucked girl-style.
 		var foot: int = bones[side + "Foot"]
 		if foot >= 0 and bones[side + "UpperLeg"] >= 0 and bones[side + "LowerLeg"] >= 0:
 			_pose_leg(side, sign_side, inv)
+	_pose_fingers()
+	expressions.step(delta, gentle_expression)
+
+func _pose_spine(head: Transform3D):
+	var forward := -head.basis.z
+	var pitch := -asin(clampf(forward.y, -1.0, 1.0))
+	var yaw := wrapf(atan2(forward.x, forward.z) - body_yaw, -PI, PI)
+	var roll := clampf(head.basis.get_euler().z, -0.6, 0.6)
+	var segments: Array[int] = []
+	for human in ["Spine", "Chest", "UpperChest"]:
+		if bones.get(human, -1) >= 0:
+			segments.append(bones[human])
+	for bone in segments:
+		var pose := skeleton.get_bone_global_pose(bone)
+		var weight := 1.0 / float(segments.size())
+		var breathing := sin(pose_clock * TAU / 5.8) * 0.006
+		pose.basis = Basis(skeleton_body_basis.y, clampf(yaw, -0.8, 0.8) * 0.34 * weight) * Basis(skeleton_body_basis.x, (pitch * 0.22 + breathing) * weight) * Basis(skeleton_body_basis.z, roll * 0.18 * weight) * pose.basis
+		skeleton.set_bone_global_pose(bone, pose)
+
+func _cache_fingers():
+	finger_chains.clear()
+	for hand in 2:
+		var side := "Left" if hand == 0 else "Right"
+		var hand_rest := skeleton.get_bone_global_rest(bones[side+"Hand"])
+		var frame: Basis = hand_rest.basis.orthonormalized() * hand_anatomy[hand].local_frame
+		for digit in ["Thumb", "Index", "Middle", "Ring", "Little"]:
+			var joints: Array = ["Metacarpal", "Proximal", "Distal"] if digit == "Thumb" else ["Proximal", "Intermediate", "Distal"]
+			for j in joints.size():
+				var index: int = bones.get(side + digit + joints[j], -1)
+				if index < 0:
+					continue
+				var rest := skeleton.get_bone_global_rest(index)
+				var direction := -frame.z
+				var children := skeleton.get_bone_children(index)
+				if not children.is_empty():
+					direction = (skeleton.get_bone_global_rest(children[0]).origin - rest.origin).normalized()
+				var axis := direction.cross(-frame.y).normalized()
+				if axis.length_squared() < 0.1:
+					continue
+				finger_chains.append({"bone": index, "hand": hand, "input": 2 if digit == "Thumb" else (0 if digit == "Index" else 1), "axis": rest.basis.orthonormalized().inverse() * axis, "angle": deg_to_rad([46.0, 68.0, 42.0][j] * (0.52 if digit == "Thumb" else 1.0))})
+
+func _pose_fingers():
+	for joint in finger_chains:
+		var rest := skeleton.get_bone_rest(joint.bone).basis.get_rotation_quaternion()
+		var amount: float = finger_curls[joint.hand][joint.input]
+		skeleton.set_bone_pose_rotation(joint.bone, rest * Quaternion(joint.axis, joint.angle * amount))
 
 func _distribute_forearm_twist(lower: int, hand: int, desired: Basis, dorsal_local: Vector3):
 	var elbow := skeleton.get_bone_global_pose(lower)
@@ -208,14 +294,17 @@ func _pose_leg(side: String, sign_side: float, inv: Transform3D):
 	var left := Basis(Vector3.UP, body_yaw).x
 	var up := Basis(Vector3.UP, body_yaw).y
 	var hip_world := skeleton.to_global(skeleton.get_bone_global_pose(upper).origin)
-	var s := size_multiplier
-	# Feet stay anchored to the hips so a height change cannot pop the legs.
-	var knee_world := hip_world + forward * 0.22 * s - up * 0.02 * s
-	var foot_world := hip_world + forward * 0.04 * s + left * sign_side * 0.085 * s - up * 0.06 * s
-	_solve_limb(upper, lower, foot, inv * foot_world, inv * knee_world)
+	var thigh := skeleton.to_global(skeleton.get_bone_global_pose(lower).origin).distance_to(hip_world)
+	# Scale from this avatar's actual leg length. Knees draw inward; ankles
+	# spread beside the hips, behind the knees, with an open W silhouette.
+	var knee_offset := (forward * 0.94 - left * sign_side * 0.20 - up * 0.18) * thigh
+	var foot_world := hip_world + (forward * 0.27 + left * sign_side * 0.42 - up * 0.25) * thigh
+	# A pole is a direction from the hip, not an absolute skeleton-space point.
+	_solve_limb(upper, lower, foot, inv * foot_world, inv.basis * knee_offset)
 	var pose := skeleton.get_bone_global_pose(foot)
 	var rest := skeleton.get_bone_global_rest(foot)
-	var desired := Basis.looking_at(forward, Vector3.UP)
+	# Toes extend away from the bent knees instead of pointing straight up.
+	var desired := Basis(left, up, forward).orthonormalized() * Basis(Vector3.UP, PI + sign_side * 0.27)
 	var rest_frame := rest.basis.orthonormalized().inverse() * skeleton_body_basis
 	pose.basis = (skeleton.global_basis.orthonormalized().inverse() * desired * rest_frame.inverse()).orthonormalized()
 	skeleton.set_bone_global_pose(foot, pose)

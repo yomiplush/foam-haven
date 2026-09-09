@@ -7,6 +7,10 @@ const AvatarRig = preload("res://scripts/avatar_rig.gd")
 const AvatarLibrary = preload("res://scripts/avatar_library.gd")
 const AvatarMirror = preload("res://scripts/avatar_mirror.gd")
 const BubbleMotion = preload("res://scripts/bubble_motion.gd")
+const FloatingLayout = preload("res://scripts/floating_layout.gd")
+const FloatingGarden = preload("res://scripts/floating_garden.gd")
+const MixedReality = preload("res://scripts/mixed_reality.gd")
+const MR_WORLD := 5
 var worlds = Worlds.new()
 var world: Node3D
 var environment: Environment
@@ -21,7 +25,7 @@ var clock := 0.0
 var next_performance_log := 10.0
 var drift_clock := 0.0
 var drift := false
-var scene_index := 0
+var scene_index := 3
 var balloon_mode := false
 var membrane_visible := true
 var sound_on := true
@@ -69,9 +73,17 @@ var avatar_loading := false
 var avatar_picker: FileDialog
 var mirror: Node3D
 var calibration_pending := false
+var garden: Node3D
+var mr_membrane := false
+var mr_motion := true
+var last_vr_world := 3
+var mr_preview := false
+var wrist_ribbons := true
+var ribbons: Array[Node3D] = []
 
 func _ready():
 	demo_mode = "--capture" in OS.get_cmdline_user_args()
+	mr_preview = demo_mode or "--smoke-test" in OS.get_cmdline_user_args() or "--mr-preview" in OS.get_cmdline_user_args()
 	_load_preferences()
 	_make_rig()
 	_make_environment()
@@ -79,6 +91,10 @@ func _ready():
 	_make_menu()
 	_make_audio()
 	_make_avatar_system()
+	garden = FloatingGarden.new()
+	add_child(garden)
+	garden.configure(worlds)
+	garden.touched.connect(_garden_touched)
 	_switch_world(scene_index)
 	_place_menu()
 	_update_ui()
@@ -88,6 +104,8 @@ func _ready():
 		_smoke_test.call_deferred()
 	else:
 		_restore_avatar.call_deferred()
+	if "--mr" in OS.get_cmdline_user_args():
+		_switch_world(MR_WORLD)
 
 func _make_rig():
 	origin = XROrigin3D.new()
@@ -177,7 +195,23 @@ func _make_environment():
 	add_child(sun)
 
 func _switch_world(index: int):
-	scene_index = posmod(index, 5)
+	index = posmod(index, 6)
+	if index == MR_WORLD and not MixedReality.supported(xr):
+		if not mr_preview:
+			if is_instance_valid(menu):
+				menu.status.text = I18n.t("mr_unavailable")
+			if is_instance_valid(world):
+				return
+			index = last_vr_world
+		else:
+			print("FOAM_MR_PREVIEW: synthetic background; no camera passthrough")
+	if not (index == MR_WORLD and mr_preview and not MixedReality.supported(xr)):
+		if not MixedReality.apply(xr, get_viewport(), environment, index == MR_WORLD):
+			menu.status.text = I18n.t("mr_unavailable")
+			return
+	scene_index = index
+	if scene_index != MR_WORLD:
+		last_vr_world = scene_index
 	if is_instance_valid(world):
 		remove_child(world)
 		world.queue_free()
@@ -186,21 +220,24 @@ func _switch_world(index: int):
 	spawned.clear()
 	world = worlds.build(scene_index)
 	add_child(world)
+	var palette_index := mini(scene_index, 4)
 	var sky_mat := ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = [Color("073750"), Color("737ea9"), Color("8a92b1"), Color("b7a4ba"), Color("b8a6df")][scene_index]
-	sky_mat.sky_horizon_color = [Color("348d9f"), Color("f8c8b5"), Color("f9dacc"), Color("ffe1c5"), Color("ffe0ef")][scene_index]
-	sky_mat.ground_bottom_color = [Color("092d43"), Color("9c91ba"), Color("c3adc5"), Color("b9a4a5"), Color("e7b6d7")][scene_index]
+	sky_mat.sky_top_color = [Color("073750"), Color("737ea9"), Color("8a92b1"), Color("b7a4ba"), Color("b8a6df")][palette_index]
+	sky_mat.sky_horizon_color = [Color("348d9f"), Color("f8c8b5"), Color("f9dacc"), Color("ffe1c5"), Color("ffe0ef")][palette_index]
+	sky_mat.ground_bottom_color = [Color("092d43"), Color("9c91ba"), Color("c3adc5"), Color("b9a4a5"), Color("e7b6d7")][palette_index]
 	sky_mat.ground_horizon_color = sky_mat.sky_horizon_color
 	sky_mat.sky_curve = 0.22
 	var sky_resource := Sky.new()
 	sky_resource.sky_material = sky_mat
 	environment.sky = sky_resource
-	environment.ambient_light_color = [Color("75bdc9"), Color("e6cddd"), Color("e4d1dc"), Color("ffe1ce"), Color("f5deef")][scene_index]
+	environment.ambient_light_color = [Color("75bdc9"), Color("e6cddd"), Color("e4d1dc"), Color("ffe1ce"), Color("f5deef")][palette_index]
 	environment.ambient_light_energy = 0.40 if scene_index >= 2 else 0.52
 	sun.light_energy = 0.60 if scene_index >= 2 else 0.85
-	sun.shadow_enabled = scene_index >= 2
+	# Analytic floor contact shadows stay soft and stable in both eyes. Avoid
+	# re-rendering the entire toy collection into a mobile shadow map.
+	sun.shadow_enabled = false
 	sun.rotation_degrees = Vector3(-48, -155, 0) if scene_index >= 2 else Vector3(-36,-32,0)
-	sun.light_color = [Color("ccebe4"), Color("ffe1c3"), Color("ffe2c4"), Color("ffe5cf"), Color("fff1df")][scene_index]
+	sun.light_color = [Color("ccebe4"), Color("ffe1c3"), Color("ffe2c4"), Color("ffe5cf"), Color("fff1df")][palette_index]
 	environment.fog_enabled = scene_index == 0
 	environment.fog_light_color = Color("256f86")
 	environment.fog_density = 0.011
@@ -210,6 +247,9 @@ func _switch_world(index: int):
 	stroll_velocity = Vector3.ZERO
 	drift_clock = 0.0
 	drift = false
+	_recenter()
+	if is_instance_valid(mirror) and mirror.enabled:
+		mirror.place(camera.global_transform)
 	_update_audio()
 	_update_ui()
 
@@ -218,11 +258,11 @@ func _make_bubble():
 	bubble_mat.shader = load("res://shaders/soap.gdshader")
 	bubble_mat.set_shader_parameter("opacity", 0.85)
 	bubble_mat.set_shader_parameter("gel", 1.0)
-	bubble = worlds.sphere(self, bubble_anchor, Vector3(bubble_radius, 1.05, bubble_radius), bubble_mat, 96, 32)
+	bubble = worlds.sphere(self, bubble_anchor, FloatingLayout.INNER_AXES, bubble_mat, 96, 32)
 	bubble.name = "YourBubble"
 	outer_mat = bubble_mat.duplicate()
 	outer_mat.set_shader_parameter("shell_layer", 1.0)
-	outer_bubble = worlds.sphere(self, bubble_anchor, Vector3(bubble_radius + 0.075, 1.125, bubble_radius + 0.075), outer_mat, 96, 32)
+	outer_bubble = worlds.sphere(self, bubble_anchor, FloatingLayout.OUTER_AXES, outer_mat, 96, 32)
 	outer_bubble.name = "ThickTransparentOuterMembrane"
 
 func _make_menu():
@@ -255,6 +295,14 @@ func _menu_action(action: StringName, index: int):
 			mirror.place(camera.global_transform)
 			menu.avatar_note.text = I18n.t("note_eye_centered")
 		&"mirror": _toggle_mirror()
+		&"ribbons":
+			wrist_ribbons = not wrist_ribbons
+			_save_preferences()
+			_update_ui()
+		&"expression":
+			avatar.gentle_expression = not avatar.gentle_expression
+			_save_avatar()
+			_update_ui()
 		&"avatar_smaller", &"avatar_larger":
 			avatar.size_multiplier = clampf(avatar.size_multiplier + (-0.05 if action == &"avatar_smaller" else 0.05), 0.5, 1.5)
 			avatar.calibrate(camera.global_transform)
@@ -273,15 +321,17 @@ func _place_menu():
 func _update_ui():
 	if not is_instance_valid(menu):
 		return
-	menu.update_state(scene_index, balloon_mode, membrane_visible, drift, sound_on)
+	var skin_visible := mr_membrane if scene_index == MR_WORLD else membrane_visible
+	menu.update_state(scene_index, balloon_mode, skin_visible, mr_motion if scene_index == MR_WORLD else drift, sound_on)
+	menu.update_mr_support(MixedReality.supported(xr) or mr_preview)
 	if is_instance_valid(avatar) and is_instance_valid(mirror):
-		menu.update_avatar_tools(mirror.enabled)
+		menu.update_avatar_tools(mirror.enabled, wrist_ribbons, avatar.gentle_expression)
 	bubble_mat.set_shader_parameter("latex", 1.0 if balloon_mode else 0.0)
 	outer_mat.set_shader_parameter("latex", 1.0 if balloon_mode else 0.0)
 	for mat in [bubble_mat, outer_mat]:
 		mat.set_shader_parameter("tint", Color("ff80b5") if balloon_mode else Color("b8f0ff"))
-	bubble.visible = membrane_visible
-	outer_bubble.visible = membrane_visible
+	bubble.visible = skin_visible and not menu_open
+	outer_bubble.visible = bubble.visible
 
 func _make_audio():
 	soundscape = Soundscape.new()
@@ -297,6 +347,8 @@ func _clear_interaction():
 	_set_hover(null)
 	pointer_dot.visible = false
 	pointer_ray.visible = false
+	if is_instance_valid(garden):
+		garden.clear_interaction()
 func _toggle_mode():
 	balloon_mode = not balloon_mode
 	_update_ui()
@@ -304,12 +356,21 @@ func _toggle_mode():
 
 func _toggle_skin():
 	_clear_interaction()
-	membrane_visible = not membrane_visible
+	if scene_index == MR_WORLD:
+		mr_membrane = not mr_membrane
+	else:
+		membrane_visible = not membrane_visible
 	_update_ui()
 	_save_preferences()
 
 func _toggle_drift():
 	if transitioning or not focused:
+		return
+	if scene_index == MR_WORLD:
+		mr_motion = not mr_motion
+		garden.floating = mr_motion
+		_update_ui()
+		_save_preferences()
 		return
 	if not drift and menu_open:
 		_toggle_menu()
@@ -334,6 +395,9 @@ func _toggle_menu():
 func _travel(index: int):
 	if transitioning or index == scene_index:
 		return
+	if index == MR_WORLD and not MixedReality.supported(xr) and not mr_preview:
+		menu.status.text = I18n.t("mr_unavailable")
+		return
 	transitioning = true
 	fade_surface.show()
 	_clear_interaction()
@@ -351,13 +415,30 @@ func _travel(index: int):
 	transitioning = false
 	fade_surface.hide()
 
-func _recenter():
+func _recenter(rebuild_garden: bool = true):
 	# Never alter the runtime's tracked head pose. Move the enclosing sphere instead.
 	bubble_anchor = camera.position + stroll_offset - Vector3(0, 0.25, 0)
 	bubble.position = origin.position - stroll_offset + bubble_anchor
 	outer_bubble.position = bubble.position
+	_update_floating_layout()
+	if rebuild_garden and is_instance_valid(garden):
+		garden.populate(camera.global_transform, scene_index == MR_WORLD)
+		garden.floating = mr_motion if scene_index == MR_WORLD else true
 	if menu_open:
 		_place_menu()
+	if rebuild_garden and is_instance_valid(mirror) and mirror.enabled:
+		mirror.place(camera.global_transform)
+
+func _update_floating_layout():
+	var orientation := FloatingLayout.shell_basis(clock)
+	bubble.basis = orientation.scaled_local(FloatingLayout.INNER_AXES)
+	outer_bubble.basis = orientation.scaled_local(FloatingLayout.OUTER_AXES)
+	if is_instance_valid(world) and scene_index != MR_WORLD:
+		world.position = Vector3(bubble_anchor.x, FloatingLayout.scenery_height(bubble_anchor.y), bubble_anchor.z)
+
+func _garden_touched(hand: int, strength: float):
+	if xr_active and controllers[hand].get_has_tracking_data():
+		controllers[hand].trigger_haptic_pulse("haptic", 0.0, 0.10 + strength * 0.22, 0.09, 0.0)
 
 func _focus_lost():
 	focused = false
@@ -372,7 +453,7 @@ func _focus_gained():
 	focused = true
 	print("FOAM_SESSION_FOCUSED")
 	drift = false
-	_recenter()
+	_recenter(scene_index != MR_WORLD or clock < 1.2)
 	_update_audio()
 	_update_ui()
 
@@ -403,15 +484,15 @@ func _process(delta: float):
 	clock += delta
 	if OS.has_feature("android") and clock >= next_performance_log:
 		next_performance_log = clock + 15.0
-		print("FOAM_PERF: world=", scene_index, " fps=", Engine.get_frames_per_second(), " draw_calls=", Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), " primitives=", Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME), " process_ms=", Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0)
+		print("FOAM_PERF: world=", scene_index, " fps=", Engine.get_frames_per_second(), " draw_calls=", Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), " primitives=", Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME), " process_ms=", Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, " mirror=", mirror.enabled, " mr=", scene_index == MR_WORLD)
 	worlds.update(clock)
 	origin.position -= stroll_offset
-	if drift and not transitioning:
+	if drift and not transitioning and scene_index != MR_WORLD:
 		drift_clock += delta
 		# Bounded 8 cm vertical, 5 cm lateral drift; no camera rotation or forced travel.
 		origin.position = Vector3(sin(drift_clock * 0.14) * 0.05, sin(drift_clock * 0.22) * 0.08, 0)
 	var stick := Vector2.ZERO
-	if not menu_open and not transitioning:
+	if not menu_open and not transitioning and scene_index != MR_WORLD:
 		if xr_active and controllers[0].get_has_tracking_data():
 			stick = controllers[0].get_vector2("primary")
 		elif not xr_active:
@@ -421,8 +502,9 @@ func _process(delta: float):
 		stroll_velocity = Vector3.ZERO
 	origin.position += stroll_offset
 	if xr_active and clock < 1.2:
-		_recenter()
+		_recenter(false)
 	bubble.position = origin.position - stroll_offset + bubble_anchor
+	_update_floating_layout()
 	bubble_mat.set_shader_parameter("clock", clock)
 	outer_bubble.position = bubble.position
 	outer_mat.set_shader_parameter("clock", clock)
@@ -432,11 +514,13 @@ func _process(delta: float):
 	touch_cooldown = maxf(0, touch_cooldown - delta)
 	spawn_cooldown = maxf(0, spawn_cooldown - delta)
 	_update_avatar_pose(delta)
+	_update_ribbons()
+	_step_garden(delta)
 	mirror.update_reflection(camera.global_transform, xr, origin.global_transform, focused and avatar.is_loaded() and not menu_open and not transitioning)
 	for i in controllers.size():
 		controller_visuals[i].visible = xr_active and controllers[i].get_has_tracking_data() and not avatar.is_loaded()
 		press_target[i] = 0.0
-		if xr_active and controllers[i].get_has_tracking_data() and not menu_open and membrane_visible and not transitioning:
+		if xr_active and controllers[i].get_has_tracking_data() and bubble.visible and not transitioning:
 			var local := bubble.to_local(controllers[i].global_position)
 			var reach := local.length()
 			var grip: float = controllers[i].get_float("grip")
@@ -458,7 +542,7 @@ func _process(delta: float):
 		else:
 			haptic_clock[i] = 0.0
 		pressing[i] = press_target[i] > 0.025
-	if not xr_active and desktop_press and not menu_open and membrane_visible and not transitioning:
+	if not xr_active and desktop_press and bubble.visible and not transitioning:
 		press_points[1] = (bubble.global_basis.inverse() * camera.project_ray_normal(get_viewport().get_mouse_position())).normalized()
 		press_target[1] = 0.20
 	if stroll_offset.length() > 0.16 and not menu_open:
@@ -471,7 +555,7 @@ func _process(delta: float):
 		previous_rub_points[i] = press_points[i]
 		previous_rub_depth[i] = press_depth[i]
 	var pressure := maxf(press_target[0], press_target[1]) / 0.20
-	soundscape.update_rubbing(delta, pressure, rub_motion, balloon_mode)
+	soundscape.update_rubbing(delta, maxf(pressure, garden.pressure), maxf(rub_motion, garden.rub_motion), balloon_mode or garden.pressure > pressure)
 	_update_pointer()
 	_step_spawned_bubbles(delta)
 
@@ -483,16 +567,17 @@ func _step_spawned_bubbles(delta: float):
 			entry.node.queue_free()
 			spawned.remove_at(i)
 			soundscape.play_pop()
-	BubbleMotion.step(spawned, delta, Vector3(bubble_radius,1.05,bubble_radius), camera.global_position-bubble.global_position)
+	var orientation := bubble.global_basis.orthonormalized()
+	BubbleMotion.step(spawned, delta, FloatingLayout.INNER_AXES, orientation.inverse() * (camera.global_position-bubble.global_position))
 	for entry in spawned:
-		entry.node.global_position = bubble.global_position + entry.position
+		entry.node.global_position = bubble.global_position + orientation * entry.position
 		entry.material.set_shader_parameter("clock", clock)
 		var pop: float = clampf((entry.age-entry.lifetime+0.28)/0.28,0,1)
 		entry.node.scale = Vector3.ONE * entry.radius * (1.0+pop*0.15)
 		entry.material.set_shader_parameter("opacity", 1.0-pop)
 
 func _touch(point: Vector3, hand: int, force: bool):
-	if touch_cooldown > 0.0 or not membrane_visible or menu_open or not focused or transitioning:
+	if touch_cooldown > 0.0 or not bubble.visible or menu_open or not focused or transitioning:
 		return
 	var local := bubble.to_local(point)
 	if not force and absf(local.length() - 1.0) > 0.10:
@@ -511,6 +596,10 @@ func _spawn_bubble(point: Vector3, direction: Vector3):
 	if spawn_cooldown > 0 or spawned.size() >= BubbleMotion.MAX_BUBBLES or not focused or transitioning or menu_open:
 		return
 	spawn_cooldown = 0.3
+	if scene_index == MR_WORLD:
+		if garden.spawn(point, direction):
+			soundscape.play_bubble()
+		return
 	var mat := ShaderMaterial.new()
 	mat.shader = preload("res://shaders/small_bubble.gdshader")
 	mat.set_shader_parameter("opacity", 1.0)
@@ -519,9 +608,10 @@ func _spawn_bubble(point: Vector3, direction: Vector3):
 	var launch := direction.normalized() if direction.length_squared() > 0.001 else Vector3.FORWARD
 	var n := worlds.sphere(self, point + launch * 0.12, Vector3.ONE * radius, mat, 20, 10)
 	n.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var entry := {"node": n, "material": mat, "position": n.global_position-bubble.global_position, "velocity": launch * 0.48 + Vector3.UP*0.035, "radius": radius, "age": 0.0, "lifetime": randf_range(22.0,32.0)}
-	BubbleMotion.contain(entry, Vector3(bubble_radius,1.05,bubble_radius))
-	n.global_position = bubble.global_position + entry.position
+	var orientation := bubble.global_basis.orthonormalized()
+	var entry := {"node": n, "material": mat, "position": orientation.inverse() * (n.global_position-bubble.global_position), "velocity": orientation.inverse() * (launch * 0.48 + Vector3.UP*0.035), "radius": radius, "age": 0.0, "lifetime": randf_range(22.0,32.0)}
+	BubbleMotion.contain(entry, FloatingLayout.INNER_AXES)
+	n.global_position = bubble.global_position + orientation * entry.position
 	spawned.append(entry)
 	soundscape.play_bubble()
 
@@ -650,6 +740,10 @@ func _save_preferences():
 	config.set_value("haven", "membrane", membrane_visible)
 	config.set_value("haven", "sound", sound_on)
 	config.set_value("haven", "lang", I18n.lang)
+	config.set_value("haven", "mr_membrane", mr_membrane)
+	config.set_value("haven", "mr_motion", mr_motion)
+	config.set_value("haven", "last_vr_world", last_vr_world)
+	config.set_value("haven", "ribbons", wrist_ribbons)
 	config.save("user://preferences.cfg")
 
 func _load_preferences():
@@ -657,10 +751,14 @@ func _load_preferences():
 		return
 	var config := ConfigFile.new()
 	if config.load("user://preferences.cfg") == OK:
-		scene_index = clampi(int(config.get_value("haven", "scene", 0)), 0, 4)
+		scene_index = clampi(int(config.get_value("haven", "scene", 3)), 0, 5)
 		balloon_mode = bool(config.get_value("haven", "balloon", false))
 		membrane_visible = bool(config.get_value("haven", "membrane", true))
 		sound_on = bool(config.get_value("haven", "sound", true))
+		mr_membrane = bool(config.get_value("haven", "mr_membrane", false))
+		mr_motion = bool(config.get_value("haven", "mr_motion", true))
+		last_vr_world = clampi(int(config.get_value("haven", "last_vr_world", 3)), 0, 4)
+		wrist_ribbons = bool(config.get_value("haven", "ribbons", true))
 		var saved_lang := str(config.get_value("haven", "lang", ""))
 		if saved_lang in I18n.LANG_CODES:
 			I18n.set_lang(saved_lang)
@@ -722,6 +820,26 @@ func _capture_scenes():
 		await get_tree().create_timer(0.6).timeout
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png("res://dist/preview_avatar_first_person.png")
+		camera.position = Vector3(0, 0.82, 0)
+		camera.rotation = Vector3.ZERO
+		_recenter()
+		avatar.calibrate(camera.global_transform)
+		mirror.set_enabled(true)
+		mirror.place(camera.global_transform)
+		await get_tree().create_timer(0.8).timeout
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png("res://dist/preview_seated_mirror.png")
+		mirror.viewports[0].get_texture().get_image().save_png("res://dist/preview_avatar_reflection.png")
+		mirror.set_enabled(false)
+		camera.rotation_degrees.x = -27
+		await get_tree().create_timer(0.4).timeout
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png("res://dist/preview_floating_seated.png")
+		camera.rotation = Vector3.ZERO
+		_switch_world(MR_WORLD)
+		await get_tree().create_timer(0.8).timeout
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png("res://dist/preview_mr_layout_simulation.png")
 	print("CAPTURE_OK")
 	await _finish_checks()
 
@@ -935,6 +1053,7 @@ func _make_avatar_system():
 		grip.pose = "grip"
 		origin.add_child(grip)
 		avatar_grips.append(grip)
+	_make_wrist_ribbons()
 	avatar_picker = FileDialog.new()
 	avatar_picker.access = FileDialog.ACCESS_FILESYSTEM
 	avatar_picker.file_mode = FileDialog.FILE_MODE_OPEN_FILE
@@ -945,15 +1064,60 @@ func _make_avatar_system():
 	avatar_picker.file_selected.connect(_load_avatar_file)
 	get_tree().root.files_dropped.connect(_avatar_files_dropped)
 
+func _make_wrist_ribbons():
+	var satin := worlds.fabric(Color("f2aacb"))
+	var pearl := worlds.material(Color("fff1e8"), 0.04)
+	for hand in 2:
+		var ribbon := Node3D.new()
+		ribbon.name = "LeftWristRibbon" if hand == 0 else "RightWristRibbon"
+		add_child(ribbon)
+		var cuff := TorusMesh.new()
+		cuff.inner_radius = 0.024
+		cuff.outer_radius = 0.032
+		cuff.rings = 20
+		cuff.ring_segments = 8
+		var band := worlds.mesh_node(ribbon, cuff, Vector3.ZERO, Vector3.ONE, satin)
+		band.rotation.x = PI * 0.5
+		for side in [-1.0, 1.0]:
+			var points := PackedVector3Array()
+			for i in 21:
+				var angle := TAU * i / 20.0
+				points.append(Vector3(side * (1-cos(angle)) * 0.024, 0.032 + sin(angle)*0.014, sin(angle)*0.025))
+			worlds.curve(ribbon, points, 0.007, satin, 6)
+			worlds.curve(ribbon, PackedVector3Array([Vector3(0,0.034,0), Vector3(side*0.014,0.030,0.03), Vector3(side*0.022,0.012,0.06)]), 0.008, satin, 6, 0.65)
+		worlds.sphere(ribbon, Vector3(0,0.037,0), Vector3.ONE*0.013, pearl, 16, 8)
+		worlds._batch_geometry(ribbon)
+		for geometry: GeometryInstance3D in ribbon.find_children("*", "GeometryInstance3D", true, false):
+			geometry.layers = 1 | (1 << 19)
+			geometry.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ribbons.append(ribbon)
+
+func _update_ribbons():
+	for hand in 2:
+		var ribbon := ribbons[hand]
+		ribbon.visible = wrist_ribbons and not menu_open and (avatar.is_loaded() or (xr_active and avatar_grips[hand].get_has_tracking_data()))
+		if not ribbon.visible:
+			continue
+		if avatar.is_loaded():
+			var frame: Transform3D = avatar.hand_world_frame(hand)
+			var bone: int = avatar.bones["LeftHand" if hand == 0 else "RightHand"]
+			frame.origin = avatar.skeleton.to_global(avatar.skeleton.get_bone_global_pose(bone).origin)
+			ribbon.global_transform = frame
+			ribbon.scale = Vector3.ONE * avatar.size_multiplier
+		else:
+			ribbon.global_transform = controllers[hand].global_transform
+			ribbon.global_position = avatar_grips[hand].global_position + controllers[hand].global_basis.z * 0.065
+
 func _update_avatar_pose(delta: float):
 	if not avatar.is_loaded():
 		return
 	var inputs := _avatar_hand_inputs()
-	avatar.update_pose(camera.global_transform, inputs.hands, inputs.tracking, delta)
+	avatar.update_pose(camera.global_transform, inputs.hands, inputs.tracking, delta, inputs.gestures)
 
 func _avatar_hand_inputs() -> Dictionary:
 	var hands: Array[Transform3D] = []
 	var tracking: Array[bool] = []
+	var gestures: Array[Vector3] = []
 	for i in 2:
 		# Stable semantic identity even when the hands cross: 0=left, 1=right.
 		# Grip supplies the palm position; aim's +Y follows the controller's upper face.
@@ -961,7 +1125,21 @@ func _avatar_hand_inputs() -> Dictionary:
 		hand.basis = controllers[i].global_basis.orthonormalized()
 		hands.append(hand)
 		tracking.append(xr_active and avatar_grips[i].get_has_tracking_data() and controllers[i].get_has_tracking_data())
-	return {"hands": hands, "tracking": tracking}
+		var grip_value: float = controllers[i].get_float("grip")
+		var trigger_value: float = controllers[i].get_float("trigger")
+		var thumb_touch: bool = controllers[i].is_button_pressed("primary_touch") or controllers[i].is_button_pressed("ax_touch") or controllers[i].is_button_pressed("by_touch")
+		gestures.append(Vector3(maxf(trigger_value, 0.13 if controllers[i].is_button_pressed("trigger_touch") else 0.04), maxf(grip_value, 0.12), 0.60 if thumb_touch else 0.13))
+	return {"hands": hands, "tracking": tracking, "gestures": gestures}
+
+func _step_garden(delta: float):
+	var positions: Array[Vector3] = []
+	var tracking: Array[bool] = []
+	var grips: Array[float] = []
+	for hand in 2:
+		positions.append(avatar_grips[hand].global_position)
+		tracking.append(xr_active and avatar_grips[hand].get_has_tracking_data())
+		grips.append(controllers[hand].get_float("grip"))
+	garden.step(delta, camera.global_position, positions, tracking, grips, not menu_open and not transitioning and focused)
 
 func _toggle_mirror():
 	if not avatar.is_loaded():
@@ -998,7 +1176,7 @@ func _calibrate_avatar():
 
 func _show_avatars(note: String = ""):
 	menu.show_avatars(AvatarLibrary.entries(), avatar.display_name, note)
-	menu.update_avatar_tools(mirror.enabled)
+	menu.update_avatar_tools(mirror.enabled, wrist_ribbons, avatar.gentle_expression)
 
 func _choose_avatar_file():
 	if xr_active and not DisplayServer.has_feature(DisplayServer.FEATURE_NATIVE_DIALOG_FILE):
@@ -1043,6 +1221,7 @@ func _save_avatar():
 	config.set_value("avatar", "path", avatar.current_path)
 	config.set_value("avatar", "size", avatar.size_multiplier)
 	config.set_value("avatar", "fitted_eye_height", avatar.fitted_eye_height)
+	config.set_value("avatar", "gentle_expression", avatar.gentle_expression)
 	config.save("user://avatar.cfg")
 
 func _restore_avatar():
@@ -1054,6 +1233,9 @@ func _restore_avatar():
 	if config.load("user://avatar.cfg") == OK:
 		avatar.size_multiplier = clampf(float(config.get_value("avatar", "size", 1.0)), 0.5, 1.5)
 		avatar.fitted_eye_height = clampf(float(config.get_value("avatar", "fitted_eye_height", 1.55)),0.85,2.2)
+		avatar.gentle_expression = bool(config.get_value("avatar", "gentle_expression", true))
 		var path := str(config.get_value("avatar", "path", ""))
 		if not path.is_empty():
 			_load_avatar_file(path)
+	else:
+		_load_avatar_file(AvatarLibrary.SAMPLE)

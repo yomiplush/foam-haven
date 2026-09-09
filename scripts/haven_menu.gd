@@ -6,11 +6,11 @@ signal action_requested(action: StringName, index: int)
 const Art = preload("res://scripts/destination_art.gd")
 const PIXELS := Vector2(1280, 1000)
 const SIZE := Vector2(1.36, 1.0625)
-const INK := Color("f4ede1")
-const MUTED := Color("9bb4b5")
-const MINT := Color("c1e4d1")
-const WORLD_KEYS := ["world_0", "world_1", "world_2", "world_3", "world_4"]
-const DESC_KEYS := ["desc_0", "desc_1", "desc_2", "desc_3", "desc_4"]
+const INK := Color("fff1f6")
+const MUTED := Color("cbb9d1")
+const MINT := Color("f2c5d8")
+const WORLD_KEYS := ["world_0", "world_1", "world_2", "world_3", "world_4", "world_5"]
+const DESC_KEYS := ["desc_0", "desc_1", "desc_2", "desc_3", "desc_4", "desc_5"]
 var viewport: SubViewport
 var panel: Control
 var main_page: Control
@@ -31,6 +31,8 @@ var avatar_rows: Array[Button] = []
 var avatar_offset := 0
 var mirror_buttons: Array[Button] = []
 var lang_buttons: Array[Button] = []
+var ribbon_button: Button
+var expression_button: Button
 
 func _ready():
 	viewport = SubViewport.new()
@@ -42,7 +44,7 @@ func _ready():
 	visibility_changed.connect(_sync_rendering)
 	panel = Panel.new()
 	panel.size = PIXELS
-	panel.add_theme_stylebox_override("panel", style(Color("122d38"), Color("49646a"), 32))
+	panel.add_theme_stylebox_override("panel", style(Color("30263f"), Color("8d728f"), 32))
 	_apply_theme()
 	viewport.add_child(panel)
 	_build_pages()
@@ -92,7 +94,7 @@ func _build_pages():
 	label(panel, I18n.t("tag_sub"), Vector2(54, 145), 24, MUTED)
 	main_page = Control.new()
 	panel.add_child(main_page)
-	for i in 5:
+	for i in 6:
 		var card := button(main_page, "", Rect2(52 + (i % 3) * 399, 205 + (i / 3) * 155, 378, 145), &"travel", i)
 		card.clip_contents = true
 		var art := Art.new()
@@ -102,7 +104,7 @@ func _build_pages():
 		card.add_child(art)
 		label(card, I18n.t(WORLD_KEYS[i]), Vector2(164, 50), 24, INK)
 		label(card, I18n.t(DESC_KEYS[i]), Vector2(164, 96), 17, MUTED)
-		var badge := label(card, I18n.t("staying"), Vector2(267, 12), 22, Color("123c3a"))
+		var badge := label(card, I18n.t("staying"), Vector2(267, 12), 22, Color("493149"))
 		var bg := style(MINT, MINT, 9)
 		bg.content_margin_left = 9
 		bg.content_margin_right = 9
@@ -118,17 +120,15 @@ func _build_pages():
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	primary = button(main_page, I18n.t("primary_enter"), Rect2(52, 808, 1176, 82), &"close")
 	primary.add_theme_stylebox_override("normal", style(MINT, MINT, 18))
-	primary.add_theme_stylebox_override("hover", style(Color("d9f2e3"), MINT, 18))
-	primary.add_theme_color_override("font_color", Color("163b3b"))
-	primary.add_theme_color_override("font_hover_color", Color("163b3b"))
-	primary.add_theme_color_override("font_pressed_color", Color("163b3b"))
+	primary.add_theme_stylebox_override("hover", style(Color("ffe1eb"), MINT, 18))
+	primary.add_theme_color_override("font_color", Color("493149"))
+	primary.add_theme_color_override("font_hover_color", Color("493149"))
+	primary.add_theme_color_override("font_pressed_color", Color("493149"))
 	button(main_page, I18n.t("btn_help"), Rect2(52, 916, 222, 54), &"help")
 	mirror_buttons.append(button(main_page, I18n.t("btn_mirror_on"), Rect2(294, 916, 222, 54), &"mirror"))
-	label(main_page, I18n.t("hint_menu"), Vector2(548, 927), 23, MUTED)
+	button(main_page, I18n.t("avatar_choose"), Rect2(536, 916, 368, 54), &"avatar_open")
+	label(main_page, I18n.t("hint_menu"), Vector2(926, 933), 18, MUTED)
 	button(main_page, I18n.t("btn_lang"), Rect2(1080, 38, 150, 52), &"lang_open")
-	var avatar_card := button(main_page, I18n.t("avatar_choose"), Rect2(850, 360, 378, 145), &"avatar_open")
-	avatar_card.add_theme_font_size_override("font_size", 24)
-	_fit(avatar_card, 24)
 	_make_avatar_page()
 	_make_lang_page()
 	_make_help()
@@ -183,9 +183,9 @@ func button(parent: Control, text: String, rect: Rect2, action: StringName, inde
 	control.position = rect.position
 	control.size = rect.size
 	control.focus_mode = Control.FOCUS_NONE
-	control.add_theme_stylebox_override("normal", style(Color("1b3944"), Color("48616a"), 18))
-	control.add_theme_stylebox_override("hover", style(Color("2b5058"), MINT, 18))
-	control.add_theme_stylebox_override("pressed", style(Color("365c60"), MINT, 18))
+	control.add_theme_stylebox_override("normal", style(Color("45334f"), Color("806a89"), 18))
+	control.add_theme_stylebox_override("hover", style(Color("64465f"), MINT, 18))
+	control.add_theme_stylebox_override("pressed", style(Color("795369"), MINT, 18))
 	control.add_theme_color_override("font_color", INK)
 	control.add_theme_color_override("font_hover_color", INK)
 	control.set_meta("action", action)
@@ -223,12 +223,20 @@ func _fit(control: Control, base_size: int):
 func update_state(index: int, balloon: bool, membrane: bool, drifting: bool, sound: bool):
 	for i in scene_buttons.size():
 		badges[i].visible = i == index
-		scene_buttons[i].add_theme_stylebox_override("normal", style(Color("1b3944"), MINT if i == index else Color("48616a"), 18))
+		scene_buttons[i].add_theme_stylebox_override("normal", style(Color("594056") if i == index else Color("45334f"), MINT if i == index else Color("806a89"), 18))
 	_set_option(options[0], I18n.t("opt_wrap") + "  " + (I18n.t("mode_balloon") if balloon else I18n.t("mode_bubble")))
 	_set_option(options[1], I18n.t("opt_membrane") + "  " + (I18n.t("on") if membrane else I18n.t("off")))
-	_set_option(options[2], I18n.t("opt_stop_drift") if drifting else I18n.t("opt_start_drift"))
+	_set_option(options[2], (I18n.t("mr_motion") + "  " + I18n.t("on" if drifting else "off")) if index == 5 else (I18n.t("opt_stop_drift") if drifting else I18n.t("opt_start_drift")))
 	_set_option(options[3], I18n.t("opt_sound") + "  " + (I18n.t("on") if sound else I18n.t("off")))
-	status.text = world_name(index) + "   /   " + (I18n.t("drift_on") if drifting else I18n.t("drift_off"))
+	status.text = I18n.t("mr_status") if index == 5 else (world_name(index) + "   /   " + (I18n.t("drift_on") if drifting else I18n.t("drift_off")))
+	primary.text = I18n.t("mr_enter") if index == 5 else I18n.t("primary_enter")
+	_fit(primary, 28)
+
+func update_mr_support(available: bool):
+	if scene_buttons.size() < 6:
+		return
+	scene_buttons[5].disabled = not available
+	scene_buttons[5].tooltip_text = "" if available else I18n.t("mr_unavailable")
 
 func _set_option(control: Button, text: String):
 	control.text = text
@@ -257,7 +265,7 @@ func set_hover(control: Button):
 
 func hit_test(pixel: Vector2) -> Button:
 	for control in buttons:
-		if control.is_visible_in_tree() and control.get_global_rect().has_point(pixel):
+		if control.is_visible_in_tree() and not control.disabled and control.get_global_rect().has_point(pixel):
 			return control
 	return null
 
@@ -327,18 +335,22 @@ func _make_avatar_page():
 	button(avatar_page, I18n.t("btn_smaller"), Rect2(52, 690, 220, 62), &"avatar_smaller")
 	button(avatar_page, I18n.t("btn_calibrate"), Rect2(290, 690, 700, 62), &"avatar_calibrate")
 	button(avatar_page, I18n.t("btn_larger"), Rect2(1008, 690, 220, 62), &"avatar_larger")
-	mirror_buttons.append(button(avatar_page, I18n.t("btn_mirror_on"), Rect2(52, 766, 370, 62), &"mirror"))
-	button(avatar_page, I18n.t("btn_recenter"), Rect2(440, 766, 788, 62), &"avatar_recenter")
+	mirror_buttons.append(button(avatar_page, I18n.t("btn_mirror_on"), Rect2(52, 766, 282, 62), &"mirror"))
+	button(avatar_page, I18n.t("btn_recenter"), Rect2(350, 766, 282, 62), &"avatar_recenter")
+	ribbon_button = button(avatar_page, "", Rect2(648, 766, 282, 62), &"ribbons")
+	expression_button = button(avatar_page, "", Rect2(946, 766, 282, 62), &"expression")
 	avatar_note = label(avatar_page, I18n.t("avatar_note_default"), Vector2(54, 838), 20, MUTED)
 	avatar_note.size = Vector2(1170, 43)
 	avatar_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label(avatar_page, I18n.t("credit_sample"), Vector2(54, 976), 14, MUTED)
 	button(avatar_page, I18n.t("btn_back"), Rect2(52, 886, 1176, 80), &"avatar_back")
 
-func update_avatar_tools(mirror_on: bool):
+func update_avatar_tools(mirror_on: bool, ribbons_on: bool = true, expression_on: bool = true):
 	for control in mirror_buttons:
 		control.text = I18n.t("btn_mirror_off") if mirror_on else I18n.t("btn_mirror_on")
 		_fit(control, 28)
+	_set_option(ribbon_button, I18n.t("ribbons") + " " + I18n.t("on" if ribbons_on else "off"))
+	_set_option(expression_button, I18n.t("expression") + " " + I18n.t("on" if expression_on else "off"))
 
 func show_avatars(entries: Array[Dictionary], current: String, note: String = ""):
 	set_hover(null)
